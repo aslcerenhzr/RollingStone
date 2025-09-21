@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 7128288686684131670}
   - component: {fileID: 5519077811967121449}
   - component: {fileID: 5963897027926448976}
+  - component: {fileID: 8476136334549905594}
   m_Layer: 0
   m_Name: LineSpline
   m_TagString: Line
@@ -257,3 +258,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   resolution: 20
+--- !u!114 &8476136334549905594
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 553377517355587930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7899cf2bb3813da42a60e89b4be94b01, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  detachOutward: 0

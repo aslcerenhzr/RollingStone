@@ -250,7 +250,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7128288686684131670, guid: 0afa92e0ab782d14c9204744b7f54d44, type: 3}
       propertyPath: m_Shape
-      value: 9013630763512102980
+      value: 9013630781160947779
+      objectReference: {fileID: 0}
+    - target: {fileID: 7128288686684131670, guid: 0afa92e0ab782d14c9204744b7f54d44, type: 3}
+      propertyPath: 'managedReferences[9013630781160947779]'
+      value: Unity.Splines UnityEngine.Splines.ExtrusionShapes.Circle
+      objectReference: {fileID: 0}
+    - target: {fileID: 7128288686684131670, guid: 0afa92e0ab782d14c9204744b7f54d44, type: 3}
+      propertyPath: managedReferences[9013630781160947779].m_Sides
+      value: 8
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1117,7 +1125,7 @@ PrefabInstance:
       objectReference: {fileID: 2103271780}
     - target: {fileID: 3920388683558895859, guid: 8cdcba893e1a7ba48a4d6e1d77e399d3, type: 3}
       propertyPath: gameMode
-      value: 1
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 3920388683558895859, guid: 8cdcba893e1a7ba48a4d6e1d77e399d3, type: 3}
       propertyPath: movesLeft

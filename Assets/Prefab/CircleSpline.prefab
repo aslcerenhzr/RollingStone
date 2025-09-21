@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 7232519878586765329}
   - component: {fileID: 8988971400975080130}
   - component: {fileID: 1086512286248961473}
+  - component: {fileID: 7009678030333093469}
   m_Layer: 0
   m_Name: CircleSpline
   m_TagString: Line
@@ -298,3 +299,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   resolution: 20
+--- !u!114 &7009678030333093469
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3821920465693222720}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7899cf2bb3813da42a60e89b4be94b01, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  detachOutward: 0

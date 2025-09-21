@@ -4,7 +4,7 @@ using TMPro;
 
 public class GameManager : MonoBehaviour
 {
-    public enum GameMode { Timer, Moves }
+    public enum GameMode { Default, Timer, Moves }
     public GameMode gameMode = GameMode.Timer;
     public GameOverManager gameOverManager;
 

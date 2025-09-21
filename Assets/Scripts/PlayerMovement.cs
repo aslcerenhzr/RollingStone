@@ -5,12 +5,16 @@ using System.Collections.Generic;
 
 public class PlayerMovement : MonoBehaviour
 {
-    public List<SplineContainer> splines = new List<SplineContainer>();
-    private SplineContainer currentSpline;
-
     public GameManager gameManager;
 
+    [Header("Hareket Ayarları")]
     public float speed = 0.2f;
+    public float detachedSpeed = 5f;
+
+    private List<SplineSettings> splineSettingsList = new List<SplineSettings>();
+    private SplineSettings currentSplineSettings;
+    public SplineContainer currentSpline;
+
     private float t = 0f;
     private float tDirection = 1f; // 1 = ileri, -1 = geri
 
@@ -19,8 +23,6 @@ public class PlayerMovement : MonoBehaviour
 
     private bool detached = false;
     private Vector3 detachedDirection;
-    public float detachedSpeed = 5f;
-    public bool isClosed = true;
 
     void Awake()
     {
@@ -30,19 +32,29 @@ public class PlayerMovement : MonoBehaviour
 
     void Start()
     {
-        splines.AddRange(FindObjectsOfType<SplineContainer>());
-        if (splines.Count > 0)
-            currentSpline = splines[0];
+        splineSettingsList.AddRange(FindObjectsOfType<SplineSettings>());
+
+        if (currentSpline != null)
+        {
+            currentSplineSettings = currentSpline.GetComponent<SplineSettings>();
+        }
+        else if (splineSettingsList.Count > 0)
+        {
+            currentSplineSettings = splineSettingsList[0];
+            currentSpline = currentSplineSettings.GetSpline();
+        }
     }
 
     void Update()
     {
         if (!detached)
         {
+            if (currentSpline == null || currentSplineSettings == null) return;
+
             // Spline üzerinde ilerleme
             t += tDirection * speed * Time.deltaTime;
 
-            if (isClosed)
+            if (currentSplineSettings.isClosed)
             {
                 if (t > 1f) t = 0f;
             }
@@ -70,31 +82,22 @@ public class PlayerMovement : MonoBehaviour
             if (tangent != Vector3.zero)
                 transform.rotation = Quaternion.LookRotation(Vector3.forward, tangent);
 
-            Vector3 left = Vector3.Cross(Vector3.forward, tangent).normalized;
-
             // Click action: detach
             if (clickAction != null && clickAction.WasPerformedThisFrame())
             {
                 detached = true;
 
-                SplineSettings splineSettings = currentSpline.GetComponent<SplineSettings>();
-
-                Vector3 center = GetSplineCenter(currentSpline);
+                Vector3 center = currentSplineSettings.GetCenter();
                 Vector3 toCenter = (center - transform.position).normalized;
+                Vector3 left = Vector3.Cross(Vector3.forward, tangent).normalized;
 
-                if (splineSettings != null && splineSettings.detachOutward)
+                if (currentSplineSettings.Outward)
                 {
-                    // Dışa doğru: her zaman left yönü değil, merkezin tersine
-                    detachedDirection = (Vector3.Dot(Vector3.Cross(Vector3.forward, tangent).normalized, toCenter) > 0)
-                        ? -Vector3.Cross(Vector3.forward, tangent).normalized
-                        : Vector3.Cross(Vector3.forward, tangent).normalized;
+                    detachedDirection = (Vector3.Dot(left, toCenter) > 0) ? -left : left;
                 }
                 else
                 {
-                    // Mevcut merkez tabanlı davranış
-                    detachedDirection = (Vector3.Dot(Vector3.Cross(Vector3.forward, tangent).normalized, toCenter) > 0)
-                        ? Vector3.Cross(Vector3.forward, tangent).normalized
-                        : -Vector3.Cross(Vector3.forward, tangent).normalized;
+                    detachedDirection = (Vector3.Dot(left, toCenter) > 0) ? left : -left;
                 }
 
                 gameManager.UseMove();
@@ -123,78 +126,40 @@ public class PlayerMovement : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        if (detached)
+        if (!detached) return;
+
+        if (other.CompareTag("Collectible"))
         {
-            if (other.CompareTag("Collectible"))
+            Destroy(other.gameObject);
+            gameManager.UpdateCollectible();
+        }
+        else
+        {
+            if (gameManager.gameMode == GameManager.GameMode.Moves && gameManager.movesLeft <= 0)
             {
-                Destroy(other.gameObject);
-                gameManager.UpdateCollectible();
+                gameManager.NoMovesLeft();
             }
             else
             {
-                if (gameManager.gameMode == GameManager.GameMode.Moves && gameManager.movesLeft <= 0)
+                if (other.CompareTag("Line"))
                 {
-                    gameManager.NoMovesLeft();
-                }
-                else
-                {
-                    if (other.CompareTag("Line"))
-                    {
-                        SplineContainer newSpline = other.GetComponent<SplineContainer>();
-                        if (newSpline != null)
-                        {
-                            detached = false;
-                            currentSpline = newSpline;
-                            t = FindClosestT(currentSpline, transform.position);
-                        }
-                    }
-
-                    if (other.CompareTag("Enemy"))
+                    SplineSettings newSettings = other.GetComponent<SplineSettings>();
+                    if (newSettings != null)
                     {
                         detached = false;
-                        gameManager.UpdateHealth();
+                        currentSplineSettings = newSettings;
+                        currentSpline = newSettings.GetSpline();
+                        t = currentSplineSettings.FindClosestT(transform.position);
                     }
+                }
+
+                if (other.CompareTag("Enemy"))
+                {
+                    detached = false;
+                    gameManager.UpdateHealth();
                 }
             }
         }
-    }
-
-    float FindClosestT(SplineContainer spline, Vector3 position)
-    {
-        float closestT = 0f;
-        float minDist = float.MaxValue;
-
-        int steps = 100;
-        for (int i = 0; i <= steps; i++)
-        {
-            float testT = i / (float)steps;
-            Vector3 testPos = spline.EvaluatePosition(testT);
-            testPos.z = 0f;
-            float dist = Vector3.Distance(position, testPos);
-            if (dist < minDist)
-            {
-                minDist = dist;
-                closestT = testT;
-            }
-        }
-
-        return closestT;
-    }
-
-    Vector3 GetSplineCenter(SplineContainer spline)
-    {
-        int steps = 50;
-        Vector3 sum = Vector3.zero;
-
-        for (int i = 0; i <= steps; i++)
-        {
-            float tSample = i / (float)steps;
-            Vector3 pos = spline.EvaluatePosition(tSample);
-            pos.z = 0f;
-            sum += pos;
-        }
-
-        return sum / (steps + 1);
     }
 }
 
