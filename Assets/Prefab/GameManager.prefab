@@ -9,8 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7983148063604251416}
-  - component: {fileID: 3920388683558895859}
-  - component: {fileID: 3504375642401334339}
+  - component: {fileID: 8333251697590626639}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -33,7 +32,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3920388683558895859
+--- !u!114 &8333251697590626639
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -45,21 +44,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a91d1b8ae4e6904c810c1a54f69a688, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gameOverManager: {fileID: 3504375642401334339}
-  health: 4
+  gameMode: 1
+  gameOverManager: {fileID: 0}
+  coinManager: {fileID: 0}
+  health: 3
+  timerText: {fileID: 0}
+  remainingTime: 0
+  movesLeft: 0
+  movesText: {fileID: 0}
   collectibleText: {fileID: 0}
   healthText: {fileID: 0}
---- !u!114 &3504375642401334339
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8753021414614301027}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 15e7055a0cb7c1f44a0f0ec930bd149d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  GameOverPanel: {fileID: 0}
-  winPanel: {fileID: 0}

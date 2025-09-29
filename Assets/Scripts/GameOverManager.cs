@@ -3,15 +3,28 @@ using UnityEngine.SceneManagement;
 
 public class GameOverManager : MonoBehaviour
 {
+    public GameManager gameManager;
     public GameObject GameOverPanel;
     public GameObject winPanel;
+    public GameObject bonusPanel;
+    public GameObject ExtraMoves;
+    public GameObject ExtraTime;
 
+
+    void Start()
+    {
+        if (gameManager == null)
+        {
+            gameManager = FindObjectOfType<GameManager>();
+        }
+
+    }
     public void ShowWin()
     {
         Time.timeScale = 0f;  // Oyun dursun
         winPanel.SetActive(true);
     }
-    
+
     public void ShowGameOver()
     {
         Time.timeScale = 0f;  // Oyun dursun
@@ -30,10 +43,61 @@ public class GameOverManager : MonoBehaviour
         Time.timeScale = 1f;
     }
 
+    public void OpenBonusPanel()
+    {
+        bonusPanel.SetActive(true);
+        GameOverPanel.SetActive(false);
+        
+        if (gameManager.gameMode == GameManager.GameMode.Timer)
+        {
+            ExtraTime.SetActive(true);
+        }
+        else if (gameManager.gameMode == GameManager.GameMode.Moves)
+        {
+            ExtraMoves.SetActive(true);
+        }
+    }
+
+    public void BacktoGameOver()
+    {
+        bonusPanel.SetActive(false);
+        GameOverPanel.SetActive(true);
+    }
+
+// --- Seçenekler ---
+    public void SkipLevel()
+    {
+        if (CoinManager.instance.SpendCoins(10))
+        {
+            NextLevel();
+            Debug.Log("10 coin ile sonraki levele geç!");
+        }
+    }
+    public void UseExtraTime()
+    {
+        if (CoinManager.instance.SpendCoins(2))
+        {
+            gameManager.remainingTime = 30f;
+            Debug.Log("2 coin ile 30 saniye eklendi!");
+            ReturnGame();
+        }
+    }
+
+    public void UseExtraMoves()
+    {
+         if (CoinManager.instance.SpendCoins(2))
+        {
+            gameManager.movesLeft = 6;
+            gameManager.UseMove();
+            Debug.Log("2 coin ile 5 hamle eklendi!");
+            ReturnGame();
+        }
+    }
+
     public void NextLevel()
     {
         Time.timeScale = 1f; // Tekrar devam etsin
-         string currentName = SceneManager.GetActiveScene().name;
+        string currentName = SceneManager.GetActiveScene().name;
 
         // "Level" kelimesini çıkar, sadece sayı kısmını al
         string numberPart = currentName.Replace("Level", "");
@@ -55,6 +119,12 @@ public class GameOverManager : MonoBehaviour
                 // SceneManager.LoadScene("Menu");
             }
         }
+    }
+
+    public void ReturnGame()
+    {
+        bonusPanel.SetActive(false);
+        Time.timeScale = 1f;
     }
 
 }

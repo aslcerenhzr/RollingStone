@@ -5,49 +5,59 @@ using TMPro;
 public class GameManager : MonoBehaviour
 {
     public enum GameMode { Default, Timer, Moves }
-    public GameMode gameMode = GameMode.Timer;
-    public GameOverManager gameOverManager;
-
+    public GameMode gameMode = GameMode.Default;
+    public float remainingTime;
+    public int movesLeft;
     public int health = 3;
+
     private GameObject[] collectibles;
     private int totalCollectibles;
     private int collectedCount = 0;
+    private bool isGameOver = false;
 
-    public TextMeshProUGUI timerText;
-    public float remainingTime;
-
-    public int movesLeft;
-    public TextMeshProUGUI movesText;
-
-    public TextMeshProUGUI collectibleText;
-    public TextMeshProUGUI healthText;
+    public GameOverManager gameOverManager;
+    public CoinManager coinManager;
+    public GameUIManager uIManager;
 
     void Start()
     {
         Time.timeScale = 1f;
 
+        if (coinManager == null)
+        {
+            coinManager = FindObjectOfType<CoinManager>();
+        }
+
+        if (uIManager == null)
+        {
+            uIManager = FindObjectOfType<GameUIManager>();
+        }
+
+        if (gameOverManager == null)
+        {
+            gameOverManager = FindObjectOfType<GameOverManager>();
+        }
+
         collectibles = GameObject.FindGameObjectsWithTag("Collectible");
         totalCollectibles = collectibles.Length;
 
-        healthText.text = health.ToString();
-        collectibleText.text = "0/" + totalCollectibles.ToString();
+        // ---- Set Game UIs ----
+        uIManager.UpdateHealthUI(health);
 
-        if (gameMode == GameMode.Timer && timerText != null)
+        if (gameMode == GameMode.Timer)
         {
-            if (timerText != null) timerText.gameObject.SetActive(true);
-            UpdateTimerUI();
+            uIManager.SetTimerUI();
         }
-        else if (gameMode == GameMode.Moves && movesText != null)
+        else if (gameMode == GameMode.Moves)
         {
-            if (movesText != null) movesText.gameObject.SetActive(true);
-            UpdateMovesUI();
+            uIManager.SetMovesUI();
+            uIManager.UpdateMovesUI(movesLeft);
         }
-
     }
 
-    void Update() 
+    void Update()
     {
-       if (gameMode == GameMode.Timer)
+        if (gameMode == GameMode.Timer)
         {
             remainingTime -= Time.deltaTime;
 
@@ -58,21 +68,8 @@ public class GameManager : MonoBehaviour
                 Time.timeScale = 0f;
             }
 
-            UpdateTimerUI();
+            uIManager.UpdateTimerUI(remainingTime);
         }
-    }
-
-     // ---- UI Update helpers ----
-    void UpdateTimerUI()
-    {
-        int minutes = Mathf.FloorToInt(remainingTime / 60);
-        int seconds = Mathf.FloorToInt(remainingTime % 60);
-        timerText.text = string.Format("{0:00}:{1:00}", minutes, seconds); 
-    }
-
-    void UpdateMovesUI()
-    {
-        movesText.text = "Moves: " + movesLeft.ToString();
     }
 
     // ---- Moves ----
@@ -81,13 +78,14 @@ public class GameManager : MonoBehaviour
         if (gameMode != GameMode.Moves) return;
 
         movesLeft--;
-        UpdateMovesUI();
+        uIManager.UpdateMovesUI(movesLeft);
     }
-
+    
     public void NoMovesLeft()
     {
-        if (movesLeft <= 0)
+        if (!isGameOver && movesLeft <= 0)
         {
+            isGameOver = true;   // artık tekrar çalışmayacak
             gameOverManager.ShowGameOver();
             Time.timeScale = 0f;
         }
@@ -97,11 +95,13 @@ public class GameManager : MonoBehaviour
     public void UpdateCollectible()
     {
         collectedCount++;
-        collectibleText.text = collectedCount.ToString() + "/" + totalCollectibles.ToString();
+        uIManager.UpdateCollectibleUI(collectedCount, totalCollectibles);
 
         if (collectedCount >= totalCollectibles)
         {
             gameOverManager.ShowWin();
+            coinManager.AddCoin(totalCollectibles);
+
         }
     }
 
@@ -109,8 +109,8 @@ public class GameManager : MonoBehaviour
     public void UpdateHealth()
     {
         health--;
-        healthText.text = health.ToString();
-
+        uIManager.UpdateHealthUI(health); 
+        
         if (health <= 0)
         {
             gameOverManager.ShowGameOver();

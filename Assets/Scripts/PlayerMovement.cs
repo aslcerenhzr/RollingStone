@@ -7,7 +7,7 @@ public class PlayerMovement : MonoBehaviour
 {
     public GameManager gameManager;
 
-    [Header("Hareket Ayarları")]
+    [Header("Movement")]
     public float speed = 0.2f;
     public float detachedSpeed = 5f;
 
@@ -22,12 +22,19 @@ public class PlayerMovement : MonoBehaviour
     private InputAction clickAction;
 
     private bool detached = false;
+    private bool hasShield = false;
     private Vector3 detachedDirection;
+    private List<GameObject> collectedTemp = new List<GameObject>();
 
     void Awake()
     {
         playerInput = GetComponent<PlayerInput>();
         clickAction = playerInput.actions["Click"];
+
+        if (gameManager == null)
+        {
+            gameManager = FindObjectOfType<GameManager>();
+        }
     }
 
     void Start()
@@ -56,7 +63,10 @@ public class PlayerMovement : MonoBehaviour
 
             if (currentSplineSettings.isClosed)
             {
-                if (t > 1f) t = 0f;
+                if (t > 1f) 
+                    t -= 1f;   // ileri giderken 1'i geçtiyse başa sar
+                else if (t < 0f) 
+                    t += 1f; 
             }
             else
             {
@@ -130,36 +140,67 @@ public class PlayerMovement : MonoBehaviour
 
         if (other.CompareTag("Collectible"))
         {
-            Destroy(other.gameObject);
             gameManager.UpdateCollectible();
-        }
-        else
-        {
-            if (gameManager.gameMode == GameManager.GameMode.Moves && gameManager.movesLeft <= 0)
+            Collectibles col = other.GetComponent<Collectibles>();
+
+            // collectible yok etme → görünmez yap ve listeye ekle
+            other.gameObject.SetActive(false);
+            collectedTemp.Add(other.gameObject);
+
+            if (col.collectibleType == Collectibles.CollectibleType.Shield)
             {
-                gameManager.NoMovesLeft();
+                hasShield = true;
+                Debug.Log("Shield aktif!");
             }
+        }
             else
             {
-                if (other.CompareTag("Line"))
+                if (gameManager.gameMode == GameManager.GameMode.Moves && gameManager.movesLeft <= 0)
                 {
-                    SplineSettings newSettings = other.GetComponent<SplineSettings>();
-                    if (newSettings != null)
+                    gameManager.NoMovesLeft();
+                }
+                else
+                {
+                    if (other.CompareTag("Line"))
                     {
-                        detached = false;
-                        currentSplineSettings = newSettings;
-                        currentSpline = newSettings.GetSpline();
-                        t = currentSplineSettings.FindClosestT(transform.position);
+                        foreach (GameObject c in collectedTemp)
+                        {
+                            Destroy(c);
+                        }
+                        collectedTemp.Clear();
+
+                        SplineSettings newSettings = other.GetComponent<SplineSettings>();
+                        if (newSettings != null)
+                        {
+                            detached = false;
+                            currentSplineSettings = newSettings;
+                            currentSpline = newSettings.GetSpline();
+                            t = currentSplineSettings.FindClosestT(transform.position);
+                            tDirection = tDirection * -1;
+                        }
+                    }
+
+                    if (other.CompareTag("Enemy"))
+                    {
+                        if (hasShield == true)
+                        {
+                            Destroy(other.gameObject);
+                            gameManager.UpdateCollectible();
+                        }
+                        else
+                        {
+                            // 🔹 Enemy'e çarptığında collectible'lar geri gelsin
+                            foreach (GameObject c in collectedTemp)
+                            {
+                                c.SetActive(true);
+                            }
+                            collectedTemp.Clear();
+
+                            detached = false;
+                            gameManager.UpdateHealth();
+                        }
                     }
                 }
-
-                if (other.CompareTag("Enemy"))
-                {
-                    detached = false;
-                    gameManager.UpdateHealth();
-                }
             }
-        }
     }
 }
-
