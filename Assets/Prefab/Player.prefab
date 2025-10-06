@@ -17,7 +17,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &4463808595501588050
 Transform:
   m_ObjectHideFlags: 0
@@ -215,9 +215,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gameManager: {fileID: 0}
-  speed: 0.6
-  detachedSpeed: 18
+  detachedSpeed: 25
+  collectFXPrefab: {fileID: 5137370083208297827, guid: 43f46681107030c4791dc08788c520b4, type: 3}
+  deathFXPrefab: {fileID: 5137370083208297827, guid: 1c6df4648d83f3647a3f0479b90f214f, type: 3}
+  enemyDeathFX: {fileID: 5137370083208297827, guid: 66e778316eb423846912c6408bbdcaad, type: 3}
   currentSpline: {fileID: 0}
+  fxObject: {fileID: 528198929455894346}
+  cameraShake: {fileID: 11400000, guid: b364484e5be0511408217a27212ec2ab, type: 2}
 --- !u!114 &4298403939628271302
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -283,7 +287,7 @@ CircleCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_Radius: 0.10000002
+  m_Radius: 0.12
 --- !u!50 &7308591619109894087
 Rigidbody2D:
   serializedVersion: 5

@@ -2,14 +2,19 @@ using UnityEngine;
 using UnityEngine.Splines;
 using UnityEngine.InputSystem;
 using System.Collections.Generic;
+using FirstGearGames.SmoothCameraShaker;
 
 public class PlayerMovement : MonoBehaviour
 {
     public GameManager gameManager;
 
     [Header("Movement")]
-    public float speed = 0.2f;
     public float detachedSpeed = 5f;
+
+    [Header("FX")]
+    public GameObject collectFXPrefab;
+    public GameObject deathFXPrefab;
+    public GameObject enemyDeathFX;
 
     private List<SplineSettings> splineSettingsList = new List<SplineSettings>();
     private SplineSettings currentSplineSettings;
@@ -25,6 +30,8 @@ public class PlayerMovement : MonoBehaviour
     private bool hasShield = false;
     private Vector3 detachedDirection;
     private List<GameObject> collectedTemp = new List<GameObject>();
+    public GameObject fxObject;
+    public ShakeData cameraShake;
 
     void Awake()
     {
@@ -59,14 +66,14 @@ public class PlayerMovement : MonoBehaviour
             if (currentSpline == null || currentSplineSettings == null) return;
 
             // Spline üzerinde ilerleme
-            t += tDirection * speed * Time.deltaTime;
+            t += tDirection * currentSplineSettings.splineSpeed * Time.deltaTime;
 
             if (currentSplineSettings.isClosed)
             {
-                if (t > 1f) 
-                    t -= 1f;   // ileri giderken 1'i geçtiyse başa sar
-                else if (t < 0f) 
-                    t += 1f; 
+                if (t > 1f)
+                    t -= 1f;
+                else if (t < 0f)
+                    t += 1f;
             }
             else
             {
@@ -96,18 +103,29 @@ public class PlayerMovement : MonoBehaviour
             if (clickAction != null && clickAction.WasPerformedThisFrame())
             {
                 detached = true;
+                if (fxObject != null) fxObject.SetActive(true);
 
-                Vector3 center = currentSplineSettings.GetCenter();
-                Vector3 toCenter = (center - transform.position).normalized;
-                Vector3 left = Vector3.Cross(Vector3.forward, tangent).normalized;
-
-                if (currentSplineSettings.Outward)
+                if (currentSplineSettings.isClosed)
                 {
-                    detachedDirection = (Vector3.Dot(left, toCenter) > 0) ? -left : left;
+                    // Kapalı spline için mevcut mantık
+                    Vector3 center = currentSplineSettings.GetCenter();
+                    Vector3 toCenter = (center - transform.position).normalized;
+                    Vector3 left = Vector3.Cross(Vector3.forward, tangent).normalized;
+
+                    if (currentSplineSettings.Outward)
+                    {
+                        detachedDirection = (Vector3.Dot(left, toCenter) > 0) ? -left : left;
+                    }
+                    else
+                    {
+                        detachedDirection = (Vector3.Dot(left, toCenter) > 0) ? left : -left;
+                    }
                 }
                 else
                 {
-                    detachedDirection = (Vector3.Dot(left, toCenter) > 0) ? left : -left;
+                    // Açık spline için sadece sağ yön
+                    Vector3 left = Vector3.Cross(Vector3.forward, tangent).normalized;
+                    detachedDirection = left; // sağ yön
                 }
 
                 gameManager.UseMove();
@@ -127,8 +145,11 @@ public class PlayerMovement : MonoBehaviour
                 }
                 else
                 {
+                    PlayDeathFX();
                     gameManager.UpdateHealth();
                     detached = false;
+
+                    if (fxObject != null) fxObject.SetActive(false);
                 }
             }
         }
@@ -136,14 +157,18 @@ public class PlayerMovement : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        if (!detached) return;
 
         if (other.CompareTag("Collectible"))
         {
-            gameManager.UpdateCollectible();
             Collectibles col = other.GetComponent<Collectibles>();
 
-            // collectible yok etme → görünmez yap ve listeye ekle
+            // 🔹 FX oluştur
+            if (collectFXPrefab != null)
+            {
+                GameObject fx = Instantiate(collectFXPrefab, other.transform.position, Quaternion.identity);
+                Destroy(fx, 0.3f); 
+            }
+
             other.gameObject.SetActive(false);
             collectedTemp.Add(other.gameObject);
 
@@ -153,54 +178,73 @@ public class PlayerMovement : MonoBehaviour
                 Debug.Log("Shield aktif!");
             }
         }
+        else
+        {
+            if (gameManager.gameMode == GameManager.GameMode.Moves && gameManager.movesLeft <= 0)
+            {
+                gameManager.NoMovesLeft();
+            }
             else
             {
-                if (gameManager.gameMode == GameManager.GameMode.Moves && gameManager.movesLeft <= 0)
+                if (other.CompareTag("Line") && detached)
                 {
-                    gameManager.NoMovesLeft();
-                }
-                else
-                {
-                    if (other.CompareTag("Line"))
+                    foreach (GameObject c in collectedTemp)
                     {
+                        gameManager.UpdateCollectible();
+                        Destroy(c);
+                    }
+                    collectedTemp.Clear();
+
+                    SplineSettings newSettings = other.GetComponent<SplineSettings>();
+                    if (newSettings != null)
+                    {
+                        detached = false;
+                        if (fxObject != null) fxObject.SetActive(false);
+                        CameraShakerHandler.Shake(cameraShake);
+                        currentSplineSettings = newSettings;
+                        currentSpline = newSettings.GetSpline();
+                        t = currentSplineSettings.FindClosestT(transform.position);
+                        tDirection = tDirection * -1;
+                    }
+                }
+
+                if (other.CompareTag("Enemy"))
+                {
+                    if (hasShield == true)
+                    {
+                        GameObject fx = Instantiate(enemyDeathFX, other.transform.position, Quaternion.identity);
+                        fx.transform.localScale = other.transform.localScale * 6;
+                        Destroy(fx, 0.3f); 
+                        Destroy(other.gameObject);
+                    }
+                    else
+                    {
+                        // 🔹 Enemy'e çarptığında collectible'lar geri gelsin
                         foreach (GameObject c in collectedTemp)
                         {
-                            Destroy(c);
+                            c.SetActive(true);
                         }
                         collectedTemp.Clear();
 
-                        SplineSettings newSettings = other.GetComponent<SplineSettings>();
-                        if (newSettings != null)
-                        {
-                            detached = false;
-                            currentSplineSettings = newSettings;
-                            currentSpline = newSettings.GetSpline();
-                            t = currentSplineSettings.FindClosestT(transform.position);
-                            tDirection = tDirection * -1;
-                        }
-                    }
+                        detached = false;
+                        if (fxObject != null) fxObject.SetActive(false);
 
-                    if (other.CompareTag("Enemy"))
-                    {
-                        if (hasShield == true)
-                        {
-                            Destroy(other.gameObject);
-                            gameManager.UpdateCollectible();
-                        }
-                        else
-                        {
-                            // 🔹 Enemy'e çarptığında collectible'lar geri gelsin
-                            foreach (GameObject c in collectedTemp)
-                            {
-                                c.SetActive(true);
-                            }
-                            collectedTemp.Clear();
-
-                            detached = false;
-                            gameManager.UpdateHealth();
-                        }
+                        PlayDeathFX();
+                        gameManager.UpdateHealth();
                     }
                 }
             }
+        }
+    }
+
+
+    private void PlayDeathFX()
+    {
+        if (deathFXPrefab != null)
+        {
+            CameraShakerHandler.Shake(cameraShake);
+            GameObject fx = Instantiate(deathFXPrefab, transform.position, Quaternion.identity);
+            Destroy(fx, 0.2f); // 2 saniye sonra otomatik sil
+        }
     }
 }

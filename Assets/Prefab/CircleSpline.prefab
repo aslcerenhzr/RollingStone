@@ -67,77 +67,77 @@ MonoBehaviour:
   - m_EditModeType: 1
     m_Knots:
     - Position:
-        x: -5
-        y: 5
+        x: 0
+        y: 3.5
         z: 1
       TangentIn:
         x: 0
         y: 0
-        z: -1.7369124
+        z: -1.933
       TangentOut:
         x: 0
         y: 0
-        z: 1.5815263
+        z: 1.933
       Rotation:
         value:
-          x: -0.34332383
-          y: 0.7923516
-          z: -0.21721691
-          w: -0.4551093
+          x: 0.72972965
+          y: -0.35875353
+          z: 0.5244676
+          w: -0.2524365
     - Position:
-        x: -5
+        x: 3.5
         y: 0
         z: 1
       TangentIn:
         x: 0
         y: 0
-        z: -1.4300544
+        z: -1.933
       TangentOut:
         x: 0
         y: 0
-        z: 1.2321911
+        z: 1.933
       Rotation:
         value:
-          x: 0.26324087
-          y: 0.65628105
-          z: -0.2632402
-          w: 0.65628046
-    - Position:
-        x: 0
-        y: 0
-        z: 1
-      TangentIn:
-        x: 0
-        y: 0
-        z: -1.194704
-      TangentOut:
-        x: 0
-        y: 0
-        z: 1.3500001
-      Rotation:
-        value:
-          x: -0.28264803
-          y: 0.64815915
-          z: 0.2826483
-          w: 0.6481587
+          x: 0.49468717
+          y: 0.50526345
+          z: -0.49468097
+          w: 0.5052565
     - Position:
         x: 0
-        y: 5
+        y: -3.5
         z: 1
       TangentIn:
         x: 0
         y: 0
-        z: -1.4306599
+        z: -1.933
       TangentOut:
         x: 0
         y: 0
-        z: 1.3522873
+        z: 1.933
       Rotation:
         value:
-          x: 0.29387024
-          y: 0.6431499
-          z: 0.29386982
-          w: -0.6431478
+          x: 0.7070803
+          y: 0.0065998263
+          z: -0.7070716
+          w: 0.00660681
+    - Position:
+        x: -3.5
+        y: 0
+        z: 1
+      TangentIn:
+        x: 0
+        y: 0
+        z: -1.933
+      TangentOut:
+        x: 0
+        y: 0
+        z: 1.933
+      Rotation:
+        value:
+          x: 0.4973152
+          y: 0.502712
+          z: 0.4972749
+          w: -0.50266874
     m_MetaData:
     - Mode: 3
       Tension: 0.5
@@ -311,4 +311,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7899cf2bb3813da42a60e89b4be94b01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  detachOutward: 0
+  Outward: 0
+  isClosed: 1

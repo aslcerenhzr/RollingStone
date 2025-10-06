@@ -1,13 +1,73 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 public class GameUIManager : MonoBehaviour
 {
     public TextMeshProUGUI timerText;
     public TextMeshProUGUI movesText;
     public TextMeshProUGUI collectibleText;
-    public TextMeshProUGUI healthText;
+    public TextMeshProUGUI levelText;
+
+    [Header("Health UI")]
+    public Transform heartPanel;
+    public GameObject heartPrefab;     
+    private List<Animator> heartAnimators = new List<Animator>();
+
+    void Start()
+    {
+        UpdateLevelUI();
+    }
+
+    public void UpdateLevelUI()
+    {
+        string sceneName = SceneManager.GetActiveScene().name;
+
+        Match m = Regex.Match(sceneName, @"\d+");
+        int parsedLevel = 0;
+
+        if (m.Success && int.TryParse(m.Value, out parsedLevel))
+        {
+            levelText.text = parsedLevel.ToString("D3");
+        }
+        else
+        {
+            levelText.text = "---";
+        }
+    }   
+
+    public void InitHearts(int health)
+    {
+        // Eski kalpler varsa temizle
+        foreach (Transform child in heartPanel)
+        {
+            Destroy(child.gameObject);
+        }
+        heartAnimators.Clear();
+
+        // Yeni kalpleri oluştur
+        for (int i = 0; i < health; i++)
+        {
+            GameObject newHeart = Instantiate(heartPrefab, heartPanel.transform);
+            Animator heartAnimator = newHeart.GetComponent<Animator>();
+            heartAnimators.Add(heartAnimator);
+        }
+    }
+
+
+    public void UpdateHealthUI(int currentHealth)
+    {
+        if (currentHealth < heartAnimators.Count && currentHealth >= 0)
+        {
+            Debug.Log("kalp gitti");
+            Animator heartToLose = heartAnimators[currentHealth];
+            heartToLose.Play("HeartLose", 0, 0f);
+        }
+    }
+
 
     public void SetTimerUI()
     {
@@ -28,13 +88,7 @@ public class GameUIManager : MonoBehaviour
 
     public void UpdateMovesUI(int movesLeft)
     {
-        movesText.text = "Moves: " + movesLeft.ToString();
-    }
-
-    public void UpdateHealthUI(int health)
-    {
-        healthText.text = health.ToString();
-
+        movesText.text = movesLeft.ToString();
     }
 
     public void UpdateCollectibleUI(int collectedCount, int totalCollectibles)

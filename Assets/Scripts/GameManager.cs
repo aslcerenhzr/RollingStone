@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections;
 
 public class GameManager : MonoBehaviour
 {
@@ -43,6 +44,8 @@ public class GameManager : MonoBehaviour
 
         // ---- Set Game UIs ----
         uIManager.UpdateHealthUI(health);
+        uIManager.InitHearts(health);
+        uIManager.UpdateCollectibleUI(collectedCount, totalCollectibles);
 
         if (gameMode == GameMode.Timer)
         {
@@ -80,7 +83,7 @@ public class GameManager : MonoBehaviour
         movesLeft--;
         uIManager.UpdateMovesUI(movesLeft);
     }
-    
+
     public void NoMovesLeft()
     {
         if (!isGameOver && movesLeft <= 0)
@@ -109,12 +112,20 @@ public class GameManager : MonoBehaviour
     public void UpdateHealth()
     {
         health--;
-        uIManager.UpdateHealthUI(health); 
-        
+        uIManager.UpdateHealthUI(health);
+
         if (health <= 0)
         {
-            gameOverManager.ShowGameOver();
-            Time.timeScale = 0f;
+            StartCoroutine(GameOverDelay());
         }
+    }
+    
+    private IEnumerator GameOverDelay()
+    {
+        // 🔹 Animasyonun oynayıp bitmesi için 0.5 saniye bekle
+        yield return new WaitForSeconds(0.5f);
+
+        gameOverManager.ShowGameOver();
+        Time.timeScale = 0f;
     }
 }

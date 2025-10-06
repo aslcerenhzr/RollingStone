@@ -4,40 +4,33 @@ using TMPro;
 public class CoinManager : MonoBehaviour
 {
     public static CoinManager instance;
-
-    public int totalCoins = 0; // Bütün oyun boyunca toplanan coinler
+    public int totalCoins = 0;
 
     void Awake()
     {
-        // Singleton
-        if (instance == null)
-        {
-            instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        totalCoins = PlayerPrefs.GetInt("TotalCoins", 0);
+        Debug.Log("Coin yüklendi: " + totalCoins);
     }
 
     public void AddCoin(int amount)
     {
         totalCoins += amount;
+        PlayerPrefs.SetInt("TotalCoins", totalCoins); // Kaydet
+        PlayerPrefs.Save(); // Diske yaz
         Debug.Log("Toplam Coin: " + totalCoins);
     }
-    
-     public bool SpendCoins(int amount)
+
+    public bool SpendCoins(int amount)
     {
         if (totalCoins >= amount)
         {
             totalCoins -= amount;
+            PlayerPrefs.SetInt("TotalCoins", totalCoins); // Kaydet
+            PlayerPrefs.Save();
             return true;
         }
-        Debug.Log("paran yok");
         return false;
     }
-
-
 }
+
 

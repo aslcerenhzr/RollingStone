@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections;
+
 
 public class GameOverManager : MonoBehaviour
 {
@@ -9,6 +11,36 @@ public class GameOverManager : MonoBehaviour
     public GameObject bonusPanel;
     public GameObject ExtraMoves;
     public GameObject ExtraTime;
+    public GameObject warningPanel;
+
+    public CanvasGroup warningCanvas; // ⚡ Fade için kullanıyoruz
+
+    public void ShowWarning()
+    {
+        StopAllCoroutines(); // eski coroutine varsa sıfırla
+        warningPanel.SetActive(true);
+        warningCanvas.alpha = 1f; // direkt görünür başlat
+        StartCoroutine(HideWarningAfterDelay());
+    }
+
+    private IEnumerator HideWarningAfterDelay()
+    {
+        // 5 saniye bekle
+        yield return new WaitForSeconds(5f);
+
+        // fade-out
+        float duration = 1f; // yavaşça kaybolma süresi
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            warningCanvas.alpha = Mathf.Lerp(1f, 0f, elapsed / duration);
+            yield return null;
+        }
+
+        warningPanel.SetActive(false); // tamamen kapanınca disable et
+    }
 
 
     void Start()
@@ -81,16 +113,24 @@ public class GameOverManager : MonoBehaviour
             Debug.Log("2 coin ile 30 saniye eklendi!");
             ReturnGame();
         }
+        else
+        {
+            ShowWarning();
+        }
     }
 
     public void UseExtraMoves()
     {
-         if (CoinManager.instance.SpendCoins(2))
+        if (CoinManager.instance.SpendCoins(2))
         {
             gameManager.movesLeft = 6;
             gameManager.UseMove();
             Debug.Log("2 coin ile 5 hamle eklendi!");
             ReturnGame();
+        }
+        else
+        {
+            ShowWarning();
         }
     }
 

@@ -3,9 +3,10 @@ using UnityEngine.Splines;
 
 public class SplineSettings : MonoBehaviour
 {
-    [Header("Spline Ayarları")]
-    public bool Outward = false;   // true => detached dışarı doğru
-    public bool isClosed = true;   // spline kapalı mı?
+    [Header("Spline Settings")]
+    public bool Outward = false;
+    public bool isClosed = true;
+    public float splineSpeed = 0.7f;
 
     private SplineContainer spline;
 
@@ -20,8 +21,16 @@ public class SplineSettings : MonoBehaviour
     }
 
     // Spline merkezini hesapla
+
+    
     public Vector3 GetCenter(int steps = 50)
     {
+
+        if (!isClosed)
+        {
+            // "sağa doğru" bir yön döndür (isteğe göre büyüklüğünü değiştirebilirsin)
+            return transform.position + Vector3.right;
+        }
         Vector3 sum = Vector3.zero;
         for (int i = 0; i <= steps; i++)
         {
