@@ -6,12 +6,15 @@ using System.Collections;
 public class GameOverManager : MonoBehaviour
 {
     public GameManager gameManager;
+    public CoinManager coinManager;
+
     public GameObject GameOverPanel;
     public GameObject winPanel;
     public GameObject bonusPanel;
     public GameObject ExtraMoves;
     public GameObject ExtraTime;
     public GameObject warningPanel;
+    public GameObject pausePanel;
 
     public CanvasGroup warningCanvas; // ⚡ Fade için kullanıyoruz
 
@@ -99,7 +102,7 @@ public class GameOverManager : MonoBehaviour
 // --- Seçenekler ---
     public void SkipLevel()
     {
-        if (CoinManager.instance.SpendCoins(10))
+        if (coinManager.SpendCoins(10))
         {
             NextLevel();
             Debug.Log("10 coin ile sonraki levele geç!");
@@ -107,7 +110,7 @@ public class GameOverManager : MonoBehaviour
     }
     public void UseExtraTime()
     {
-        if (CoinManager.instance.SpendCoins(2))
+        if (coinManager.SpendCoins(2))
         {
             gameManager.remainingTime = 30f;
             Debug.Log("2 coin ile 30 saniye eklendi!");
@@ -121,7 +124,7 @@ public class GameOverManager : MonoBehaviour
 
     public void UseExtraMoves()
     {
-        if (CoinManager.instance.SpendCoins(2))
+        if (coinManager.SpendCoins(2))
         {
             gameManager.movesLeft = 6;
             gameManager.UseMove();
@@ -165,6 +168,18 @@ public class GameOverManager : MonoBehaviour
     {
         bonusPanel.SetActive(false);
         Time.timeScale = 1f;
+        GameOverPanel.SetActive(false);
     }
 
+    public void PauseGame()
+    {
+        Time.timeScale = 0f;
+        pausePanel.SetActive(true);
+    }
+
+    public void ResumeGame()
+    {
+        pausePanel.SetActive(false);
+        Time.timeScale = 1f;
+    }
 }

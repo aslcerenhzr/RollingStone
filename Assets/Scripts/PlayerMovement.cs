@@ -7,6 +7,8 @@ using FirstGearGames.SmoothCameraShaker;
 public class PlayerMovement : MonoBehaviour
 {
     public GameManager gameManager;
+    public GameOverManager gameOverManager;
+
 
     [Header("Movement")]
     public float detachedSpeed = 5f;
@@ -30,18 +32,13 @@ public class PlayerMovement : MonoBehaviour
     private bool hasShield = false;
     private Vector3 detachedDirection;
     private List<GameObject> collectedTemp = new List<GameObject>();
-    public GameObject fxObject;
+    public GameObject fxPlayer;
     public ShakeData cameraShake;
 
     void Awake()
     {
         playerInput = GetComponent<PlayerInput>();
         clickAction = playerInput.actions["Click"];
-
-        if (gameManager == null)
-        {
-            gameManager = FindObjectOfType<GameManager>();
-        }
     }
 
     void Start()
@@ -61,6 +58,18 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        if (Mouse.current.rightButton.wasPressedThisFrame)
+        {
+            if (gameOverManager != null)
+            {
+                if (Time.timeScale == 0f)
+                    gameOverManager.ResumeGame();
+                else
+                    gameOverManager.PauseGame();
+            }
+        }
+
+
         if (!detached)
         {
             if (currentSpline == null || currentSplineSettings == null) return;
@@ -103,7 +112,22 @@ public class PlayerMovement : MonoBehaviour
             if (clickAction != null && clickAction.WasPerformedThisFrame())
             {
                 detached = true;
-                if (fxObject != null) fxObject.SetActive(true);
+
+                if (fxPlayer != null)
+                {
+                    fxPlayer = Instantiate(fxPlayer, transform.position - detachedDirection.normalized * 0.5f, Quaternion.identity);
+                    fxPlayer.transform.right = -detachedDirection.normalized;
+
+                    // Sadece shield aktifken fxObject kırmızı olsun
+                    if (hasShield)
+                    {
+                        var sprite = fxPlayer.GetComponent<SpriteRenderer>();
+                        if (sprite != null)
+                        {
+                            sprite.color = Color.red;
+                        }
+                    }
+                }
 
                 if (currentSplineSettings.isClosed)
                 {
@@ -136,6 +160,7 @@ public class PlayerMovement : MonoBehaviour
             // detached hareket
             transform.position += detachedDirection * detachedSpeed * Time.deltaTime;
 
+
             Vector3 viewportPos = Camera.main.WorldToViewportPoint(transform.position);
             if (viewportPos.x < 0 || viewportPos.x > 1 || viewportPos.y < 0 || viewportPos.y > 1)
             {
@@ -149,7 +174,7 @@ public class PlayerMovement : MonoBehaviour
                     gameManager.UpdateHealth();
                     detached = false;
 
-                    if (fxObject != null) fxObject.SetActive(false);
+                    if (fxPlayer != null) Destroy(fxPlayer);
                 }
             }
         }
@@ -157,7 +182,6 @@ public class PlayerMovement : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other)
     {
-
         if (other.CompareTag("Collectible"))
         {
             Collectibles col = other.GetComponent<Collectibles>();
@@ -175,6 +199,8 @@ public class PlayerMovement : MonoBehaviour
             if (col.collectibleType == Collectibles.CollectibleType.Shield)
             {
                 hasShield = true;
+                GetComponent<SpriteRenderer>().color = Color.red;
+
                 Debug.Log("Shield aktif!");
             }
         }
@@ -199,7 +225,7 @@ public class PlayerMovement : MonoBehaviour
                     if (newSettings != null)
                     {
                         detached = false;
-                        if (fxObject != null) fxObject.SetActive(false);
+                        if (fxPlayer != null) Destroy(fxObject);
                         CameraShakerHandler.Shake(cameraShake);
                         currentSplineSettings = newSettings;
                         currentSpline = newSettings.GetSpline();
@@ -227,7 +253,7 @@ public class PlayerMovement : MonoBehaviour
                         collectedTemp.Clear();
 
                         detached = false;
-                        if (fxObject != null) fxObject.SetActive(false);
+                        if (fxPlayer != null) Destroy(fxObject)Player;
 
                         PlayDeathFX();
                         gameManager.UpdateHealth();

@@ -310,3 +310,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7899cf2bb3813da42a60e89b4be94b01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Outward: 0
+  isClosed: 1
+  splineSpeed: 0.7
