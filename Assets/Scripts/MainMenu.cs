@@ -2,16 +2,14 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
-
 public class MainMenu : MonoBehaviour
 {
-    public GameObject buttonPrefab;   
-    public Transform gridParent; 
-    public Button nextPageButton;   
+    public GameObject buttonPrefab;
+    public Transform gridParent;
+    public Button nextPageButton;
     public Button prevPageButton;
     public int totalLevels = 100;
     public int levelsPerPage = 20;
-
     private int currentPage = 0;
     private int totalPages;
 
@@ -23,39 +21,39 @@ public class MainMenu : MonoBehaviour
 
     public void ShowPage(int pageIndex)
     {
-        // Önce eski butonları temizle
         foreach (Transform child in gridParent)
         {
             Destroy(child.gameObject);
         }
 
         currentPage = Mathf.Clamp(pageIndex, 0, totalPages - 1);
-
         int startLevel = currentPage * levelsPerPage + 1;
         int endLevel = Mathf.Min(startLevel + levelsPerPage - 1, totalLevels);
 
         for (int i = startLevel; i <= endLevel; i++)
         {
             GameObject newButton = Instantiate(buttonPrefab, gridParent);
-
-            // TextMeshPro kullanıyorsan
+            Button btn = newButton.GetComponent<Button>();
             TextMeshProUGUI tmpText = newButton.GetComponentInChildren<TextMeshProUGUI>();
             if (tmpText != null)
                 tmpText.text = i.ToString();
 
             int levelIndex = i;
             newButton.GetComponent<Button>().onClick.AddListener(() => LoadLevel(levelIndex));
-        }
 
+            // 🔒 Level kilit kontrolü
+            int lastUnlockedLevel = PlayerPrefs.GetInt("LastUnlockedLevel", 1);
+            if (i <= lastUnlockedLevel)
+            {
+                btn.interactable = true;
+            }
+        }
         UpdateNavigationButtons();
     }
 
     void UpdateNavigationButtons()
     {
-        // İlk sayfadaysa Previous gizle
         prevPageButton.gameObject.SetActive(currentPage > 0);
-
-        // Son sayfadaysa Next gizle
         nextPageButton.gameObject.SetActive(currentPage < totalPages - 1);
     }
 
@@ -69,12 +67,11 @@ public class MainMenu : MonoBehaviour
     {
         if (currentPage > 0)
             ShowPage(currentPage - 1);
-        
     }
 
     void LoadLevel(int levelIndex)
     {
-        Debug.Log("Level " + levelIndex + " yükleniyor...");
         SceneManager.LoadScene("Level" + levelIndex);
     }
+    
 }

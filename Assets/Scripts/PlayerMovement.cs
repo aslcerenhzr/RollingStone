@@ -8,7 +8,8 @@ public class PlayerMovement : MonoBehaviour
 {
     public GameManager gameManager;
     public GameOverManager gameOverManager;
-
+    public SplineContainer currentSpline;
+    public ShakeData cameraShake;
 
     [Header("Movement")]
     public float detachedSpeed = 5f;
@@ -17,23 +18,18 @@ public class PlayerMovement : MonoBehaviour
     public GameObject collectFXPrefab;
     public GameObject deathFXPrefab;
     public GameObject enemyDeathFX;
+    public GameObject PlayerFX;
 
     private List<SplineSettings> splineSettingsList = new List<SplineSettings>();
     private SplineSettings currentSplineSettings;
-    public SplineContainer currentSpline;
-
     private float t = 0f;
     private float tDirection = 1f; // 1 = ileri, -1 = geri
-
     private PlayerInput playerInput;
     private InputAction clickAction;
-
     private bool detached = false;
     private bool hasShield = false;
     private Vector3 detachedDirection;
     private List<GameObject> collectedTemp = new List<GameObject>();
-    public GameObject fxPlayer;
-    public ShakeData cameraShake;
 
     void Awake()
     {
@@ -113,15 +109,14 @@ public class PlayerMovement : MonoBehaviour
             {
                 detached = true;
 
-                if (fxPlayer != null)
+                if (PlayerFX != null)
                 {
-                    fxPlayer = Instantiate(fxPlayer, transform.position - detachedDirection.normalized * 0.5f, Quaternion.identity);
-                    fxPlayer.transform.right = -detachedDirection.normalized;
+                    PlayerFX.SetActive(true);
 
                     // Sadece shield aktifken fxObject kırmızı olsun
                     if (hasShield)
                     {
-                        var sprite = fxPlayer.GetComponent<SpriteRenderer>();
+                        var sprite = PlayerFX.GetComponent<SpriteRenderer>();
                         if (sprite != null)
                         {
                             sprite.color = Color.red;
@@ -157,9 +152,11 @@ public class PlayerMovement : MonoBehaviour
         }
         else
         {
+           
             // detached hareket
             transform.position += detachedDirection * detachedSpeed * Time.deltaTime;
-
+            // 🎯 Topun bakış yönünü gidiş yönüne çevir
+            transform.right = -detachedDirection.normalized;
 
             Vector3 viewportPos = Camera.main.WorldToViewportPoint(transform.position);
             if (viewportPos.x < 0 || viewportPos.x > 1 || viewportPos.y < 0 || viewportPos.y > 1)
@@ -174,7 +171,7 @@ public class PlayerMovement : MonoBehaviour
                     gameManager.UpdateHealth();
                     detached = false;
 
-                    if (fxPlayer != null) Destroy(fxPlayer);
+                    if (PlayerFX != null) PlayerFX.SetActive(false);
                 }
             }
         }
@@ -200,8 +197,6 @@ public class PlayerMovement : MonoBehaviour
             {
                 hasShield = true;
                 GetComponent<SpriteRenderer>().color = Color.red;
-
-                Debug.Log("Shield aktif!");
             }
         }
         else
@@ -225,8 +220,9 @@ public class PlayerMovement : MonoBehaviour
                     if (newSettings != null)
                     {
                         detached = false;
-                        if (fxPlayer != null) Destroy(fxObject);
+                        if (PlayerFX != null) PlayerFX.SetActive(false);
                         CameraShakerHandler.Shake(cameraShake);
+
                         currentSplineSettings = newSettings;
                         currentSpline = newSettings.GetSpline();
                         t = currentSplineSettings.FindClosestT(transform.position);
@@ -253,7 +249,7 @@ public class PlayerMovement : MonoBehaviour
                         collectedTemp.Clear();
 
                         detached = false;
-                        if (fxPlayer != null) Destroy(fxObject)Player;
+                        if (PlayerFX != null) PlayerFX.SetActive(false);
 
                         PlayDeathFX();
                         gameManager.UpdateHealth();

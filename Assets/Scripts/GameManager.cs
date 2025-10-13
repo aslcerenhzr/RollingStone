@@ -17,17 +17,11 @@ public class GameManager : MonoBehaviour
     private bool isGameOver = false;
 
     public GameOverManager gameOverManager;
-    public CoinManager coinManager;
     public GameUIManager uIManager;
 
     void Start()
     {
         Time.timeScale = 1f;
-
-        if (coinManager == null)
-        {
-            coinManager = FindObjectOfType<CoinManager>();
-        }
 
         if (uIManager == null)
         {
@@ -88,7 +82,7 @@ public class GameManager : MonoBehaviour
     {
         if (!isGameOver && movesLeft <= 0)
         {
-            isGameOver = true;   // artık tekrar çalışmayacak
+            isGameOver = true;
             gameOverManager.ShowGameOver();
             Time.timeScale = 0f;
         }
@@ -103,8 +97,7 @@ public class GameManager : MonoBehaviour
         if (collectedCount >= totalCollectibles)
         {
             gameOverManager.ShowWin();
-            coinManager.AddCoin(totalCollectibles);
-
+            LevelProgressManager.instance.AddCoin(totalCollectibles);
         }
     }
 
@@ -122,7 +115,6 @@ public class GameManager : MonoBehaviour
     
     private IEnumerator GameOverDelay()
     {
-        // 🔹 Animasyonun oynayıp bitmesi için 0.5 saniye bekle
         yield return new WaitForSeconds(0.5f);
 
         gameOverManager.ShowGameOver();

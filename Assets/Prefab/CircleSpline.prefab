@@ -73,53 +73,17 @@ MonoBehaviour:
       TangentIn:
         x: 0
         y: 0
-        z: -1.933
+        z: -1.6247634
       TangentOut:
         x: 0
         y: 0
         z: 1.933
       Rotation:
         value:
-          x: 0.72972965
-          y: -0.35875353
-          z: 0.5244676
-          w: -0.2524365
-    - Position:
-        x: 3.5
-        y: 0
-        z: 1
-      TangentIn:
-        x: 0
-        y: 0
-        z: -1.933
-      TangentOut:
-        x: 0
-        y: 0
-        z: 1.933
-      Rotation:
-        value:
-          x: 0.49468717
-          y: 0.50526345
-          z: -0.49468097
-          w: 0.5052565
-    - Position:
-        x: 0
-        y: -3.5
-        z: 1
-      TangentIn:
-        x: 0
-        y: 0
-        z: -1.933
-      TangentOut:
-        x: 0
-        y: 0
-        z: 1.933
-      Rotation:
-        value:
-          x: 0.7070803
-          y: 0.0065998263
-          z: -0.7070716
-          w: 0.00660681
+          x: 0.63971
+          y: 0.30128232
+          z: -0.63971
+          w: -0.3012823
     - Position:
         x: -3.5
         y: 0
@@ -134,10 +98,46 @@ MonoBehaviour:
         z: 1.933
       Rotation:
         value:
-          x: 0.4973152
-          y: 0.502712
-          z: 0.4972749
-          w: -0.50266874
+          x: 0.49999994
+          y: 0.49999994
+          z: -0.50000006
+          w: 0.50000006
+    - Position:
+        x: 0
+        y: -3.5
+        z: 1
+      TangentIn:
+        x: 0
+        y: 0
+        z: -1.933
+      TangentOut:
+        x: 0
+        y: 0
+        z: 1.9513968
+      Rotation:
+        value:
+          x: 0.7070977
+          y: 0.0035366695
+          z: 0.70709807
+          w: -0.003529601
+    - Position:
+        x: 3.5
+        y: 0
+        z: 1
+      TangentIn:
+        x: 0
+        y: 0
+        z: -1.9039619
+      TangentOut:
+        x: 0
+        y: 0
+        z: 1.933
+      Rotation:
+        value:
+          x: 0.5012448
+          y: 0.49875224
+          z: 0.5011884
+          w: -0.49880874
     m_MetaData:
     - Mode: 3
       Tension: 0.5
@@ -313,3 +313,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Outward: 0
   isClosed: 1
+  splineSpeed: 0.2

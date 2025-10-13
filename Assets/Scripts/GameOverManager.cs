@@ -1,13 +1,9 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
-
-
 public class GameOverManager : MonoBehaviour
 {
     public GameManager gameManager;
-    public CoinManager coinManager;
-
     public GameObject GameOverPanel;
     public GameObject winPanel;
     public GameObject bonusPanel;
@@ -15,24 +11,20 @@ public class GameOverManager : MonoBehaviour
     public GameObject ExtraTime;
     public GameObject warningPanel;
     public GameObject pausePanel;
-
-    public CanvasGroup warningCanvas; // ⚡ Fade için kullanıyoruz
+    public CanvasGroup warningCanvas;
 
     public void ShowWarning()
     {
-        StopAllCoroutines(); // eski coroutine varsa sıfırla
+        StopAllCoroutines();
         warningPanel.SetActive(true);
-        warningCanvas.alpha = 1f; // direkt görünür başlat
+        warningCanvas.alpha = 1f;
         StartCoroutine(HideWarningAfterDelay());
     }
 
     private IEnumerator HideWarningAfterDelay()
     {
-        // 5 saniye bekle
         yield return new WaitForSeconds(5f);
-
-        // fade-out
-        float duration = 1f; // yavaşça kaybolma süresi
+        float duration = 1f;
         float elapsed = 0f;
 
         while (elapsed < duration)
@@ -41,10 +33,8 @@ public class GameOverManager : MonoBehaviour
             warningCanvas.alpha = Mathf.Lerp(1f, 0f, elapsed / duration);
             yield return null;
         }
-
-        warningPanel.SetActive(false); // tamamen kapanınca disable et
+        warningPanel.SetActive(false);
     }
-
 
     void Start()
     {
@@ -52,23 +42,30 @@ public class GameOverManager : MonoBehaviour
         {
             gameManager = FindObjectOfType<GameManager>();
         }
-
     }
+
     public void ShowWin()
     {
-        Time.timeScale = 0f;  // Oyun dursun
+        Time.timeScale = 0f;
         winPanel.SetActive(true);
+
+        string currentName = SceneManager.GetActiveScene().name;
+        string numberPart = currentName.Replace("Level", "");
+        int levelNumber;
+        int.TryParse(numberPart, out levelNumber);
+
+        LevelProgressManager.instance.CompleteLevel(levelNumber);
     }
 
     public void ShowGameOver()
     {
-        Time.timeScale = 0f;  // Oyun dursun
+        Time.timeScale = 0f;
         GameOverPanel.SetActive(true);
     }
 
     public void RestartLevel()
     {
-        Time.timeScale = 1f; // Tekrar devam etsin
+        Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
@@ -82,7 +79,7 @@ public class GameOverManager : MonoBehaviour
     {
         bonusPanel.SetActive(true);
         GameOverPanel.SetActive(false);
-        
+
         if (gameManager.gameMode == GameManager.GameMode.Timer)
         {
             ExtraTime.SetActive(true);
@@ -99,18 +96,18 @@ public class GameOverManager : MonoBehaviour
         GameOverPanel.SetActive(true);
     }
 
-// --- Seçenekler ---
     public void SkipLevel()
     {
-        if (coinManager.SpendCoins(10))
+        if (LevelProgressManager.instance.SpendCoins(10))
         {
             NextLevel();
             Debug.Log("10 coin ile sonraki levele geç!");
         }
     }
+
     public void UseExtraTime()
     {
-        if (coinManager.SpendCoins(2))
+        if (LevelProgressManager.instance.SpendCoins(2))
         {
             gameManager.remainingTime = 30f;
             Debug.Log("2 coin ile 30 saniye eklendi!");
@@ -124,7 +121,7 @@ public class GameOverManager : MonoBehaviour
 
     public void UseExtraMoves()
     {
-        if (coinManager.SpendCoins(2))
+        if (LevelProgressManager.instance.SpendCoins(2))
         {
             gameManager.movesLeft = 6;
             gameManager.UseMove();
@@ -139,18 +136,16 @@ public class GameOverManager : MonoBehaviour
 
     public void NextLevel()
     {
-        Time.timeScale = 1f; // Tekrar devam etsin
+        Time.timeScale = 1f;
         string currentName = SceneManager.GetActiveScene().name;
-
-        // "Level" kelimesini çıkar, sadece sayı kısmını al
         string numberPart = currentName.Replace("Level", "");
         int levelNumber;
+
         if (int.TryParse(numberPart, out levelNumber))
         {
             int nextLevelNumber = levelNumber + 1;
             string nextSceneName = "Level" + nextLevelNumber;
 
-            // O isimli sahne varsa yükle
             if (Application.CanStreamedLevelBeLoaded(nextSceneName))
             {
                 SceneManager.LoadScene(nextSceneName);
@@ -158,8 +153,6 @@ public class GameOverManager : MonoBehaviour
             else
             {
                 Debug.Log("Son level bitti: " + currentName);
-                // Burada menüye dönmek istersen:
-                // SceneManager.LoadScene("Menu");
             }
         }
     }
@@ -182,4 +175,6 @@ public class GameOverManager : MonoBehaviour
         pausePanel.SetActive(false);
         Time.timeScale = 1f;
     }
+    
+
 }

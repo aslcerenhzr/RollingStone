@@ -1,13 +1,11 @@
 using UnityEngine;
 using UnityEngine.Splines;
-
 public class SplineSettings : MonoBehaviour
 {
     [Header("Spline Settings")]
     public bool Outward = false;
     public bool isClosed = true;
     public float splineSpeed = 0.7f;
-
     private SplineContainer spline;
 
     void Awake()
@@ -19,19 +17,17 @@ public class SplineSettings : MonoBehaviour
     {
         return spline;
     }
-
-    // Spline merkezini hesapla
-
     
     public Vector3 GetCenter(int steps = 50)
     {
 
         if (!isClosed)
         {
-            // "sağa doğru" bir yön döndür (isteğe göre büyüklüğünü değiştirebilirsin)
             return transform.position + Vector3.right;
         }
+
         Vector3 sum = Vector3.zero;
+
         for (int i = 0; i <= steps; i++)
         {
             float t = i / (float)steps;
@@ -42,7 +38,6 @@ public class SplineSettings : MonoBehaviour
         return sum / (steps + 1);
     }
 
-    // Spline üzerinde en yakın noktayı bul
     public float FindClosestT(Vector3 position, int steps = 100)
     {
         float closestT = 0f;
@@ -61,7 +56,6 @@ public class SplineSettings : MonoBehaviour
                 closestT = testT;
             }
         }
-
         return closestT;
     }
 }
