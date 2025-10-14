@@ -1,17 +1,23 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
+using UnityEngine.InputSystem;
+
 public class GameOverManager : MonoBehaviour
 {
     public GameManager gameManager;
+    public GameUIManager gameUIManager;
     public GameObject GameOverPanel;
     public GameObject winPanel;
     public GameObject bonusPanel;
     public GameObject ExtraMoves;
     public GameObject ExtraTime;
+    public GameObject ExtraLife;
     public GameObject warningPanel;
     public GameObject pausePanel;
     public CanvasGroup warningCanvas;
+    public PlayerMovement player;
+    
 
     public void ShowWarning()
     {
@@ -49,6 +55,8 @@ public class GameOverManager : MonoBehaviour
         Time.timeScale = 0f;
         winPanel.SetActive(true);
 
+        player.GetComponent<PlayerInput>().enabled = false;
+
         string currentName = SceneManager.GetActiveScene().name;
         string numberPart = currentName.Replace("Level", "");
         int levelNumber;
@@ -61,6 +69,8 @@ public class GameOverManager : MonoBehaviour
     {
         Time.timeScale = 0f;
         GameOverPanel.SetActive(true);
+
+        player.GetComponent<PlayerInput>().enabled = false;
     }
 
     public void RestartLevel()
@@ -80,7 +90,11 @@ public class GameOverManager : MonoBehaviour
         bonusPanel.SetActive(true);
         GameOverPanel.SetActive(false);
 
-        if (gameManager.gameMode == GameManager.GameMode.Timer)
+        if (gameManager.diedByHealth)
+        {
+            ExtraLife.SetActive(true);
+        }
+        else if (gameManager.gameMode == GameManager.GameMode.Timer)
         {
             ExtraTime.SetActive(true);
         }
@@ -103,6 +117,10 @@ public class GameOverManager : MonoBehaviour
             NextLevel();
             Debug.Log("10 coin ile sonraki levele geç!");
         }
+        else
+        {
+            ShowWarning();
+        }
     }
 
     public void UseExtraTime()
@@ -123,9 +141,24 @@ public class GameOverManager : MonoBehaviour
     {
         if (LevelProgressManager.instance.SpendCoins(2))
         {
-            gameManager.movesLeft = 6;
+            gameManager.movesLeft = 5;
             gameManager.UseMove();
             Debug.Log("2 coin ile 5 hamle eklendi!");
+            ReturnGame();
+        }
+        else
+        {
+            ShowWarning();
+        }
+    }
+
+    public void UseExtraLife()
+    {
+        if (LevelProgressManager.instance.SpendCoins(500))
+        {
+            gameManager.health = 1;
+            gameUIManager.InitHearts(1);
+            Debug.Log("5 coin ile kalp eklendi!");
             ReturnGame();
         }
         else
@@ -162,18 +195,21 @@ public class GameOverManager : MonoBehaviour
         bonusPanel.SetActive(false);
         Time.timeScale = 1f;
         GameOverPanel.SetActive(false);
+        player.GetComponent<PlayerInput>().enabled = true;
     }
 
     public void PauseGame()
     {
         Time.timeScale = 0f;
         pausePanel.SetActive(true);
+        player.GetComponent<PlayerInput>().enabled = false;
     }
 
     public void ResumeGame()
     {
         pausePanel.SetActive(false);
         Time.timeScale = 1f;
+        player.GetComponent<PlayerInput>().enabled = true;
     }
     
 

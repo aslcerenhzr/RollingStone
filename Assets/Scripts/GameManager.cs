@@ -11,6 +11,8 @@ public class GameManager : MonoBehaviour
     public int movesLeft;
     public int health = 3;
 
+    public bool diedByHealth;
+
     private GameObject[] collectibles;
     private int totalCollectibles;
     private int collectedCount = 0;
@@ -110,6 +112,7 @@ public class GameManager : MonoBehaviour
         if (health <= 0)
         {
             StartCoroutine(GameOverDelay());
+            diedByHealth = true;
         }
     }
     
