@@ -1,7 +1,8 @@
-using UnityEngine;
-using UnityEngine.SceneManagement;
 using System.Collections;
+using TMPro;
+using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class GameOverManager : MonoBehaviour
 {
@@ -17,7 +18,9 @@ public class GameOverManager : MonoBehaviour
     public GameObject pausePanel;
     public CanvasGroup warningCanvas;
     public PlayerMovement player;
-    
+    public TMP_Text coinsText;
+
+
 
     public void ShowWarning()
     {
@@ -102,6 +105,9 @@ public class GameOverManager : MonoBehaviour
         {
             ExtraMoves.SetActive(true);
         }
+
+        int currentCoins = LevelProgressManager.instance.totalCoins;
+        coinsText.text = $"You have {currentCoins} coins.";
     }
 
     public void BacktoGameOver()
@@ -112,10 +118,9 @@ public class GameOverManager : MonoBehaviour
 
     public void SkipLevel()
     {
-        if (LevelProgressManager.instance.SpendCoins(10))
+        if (LevelProgressManager.instance.SpendCoins(100))
         {
             NextLevel();
-            Debug.Log("10 coin ile sonraki levele geç!");
         }
         else
         {
@@ -125,10 +130,9 @@ public class GameOverManager : MonoBehaviour
 
     public void UseExtraTime()
     {
-        if (LevelProgressManager.instance.SpendCoins(2))
+        if (LevelProgressManager.instance.SpendCoins(50))
         {
             gameManager.remainingTime = 30f;
-            Debug.Log("2 coin ile 30 saniye eklendi!");
             ReturnGame();
         }
         else
@@ -139,11 +143,10 @@ public class GameOverManager : MonoBehaviour
 
     public void UseExtraMoves()
     {
-        if (LevelProgressManager.instance.SpendCoins(2))
+        if (LevelProgressManager.instance.SpendCoins(50))
         {
             gameManager.movesLeft = 5;
             gameManager.UseMove();
-            Debug.Log("2 coin ile 5 hamle eklendi!");
             ReturnGame();
         }
         else
@@ -154,11 +157,10 @@ public class GameOverManager : MonoBehaviour
 
     public void UseExtraLife()
     {
-        if (LevelProgressManager.instance.SpendCoins(500))
+        if (LevelProgressManager.instance.SpendCoins(50))
         {
             gameManager.health = 1;
             gameUIManager.InitHearts(1);
-            Debug.Log("5 coin ile kalp eklendi!");
             ReturnGame();
         }
         else

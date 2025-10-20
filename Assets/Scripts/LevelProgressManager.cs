@@ -1,4 +1,5 @@
 using UnityEngine;
+
 public class LevelProgressManager : MonoBehaviour
 {
     public static LevelProgressManager instance;
