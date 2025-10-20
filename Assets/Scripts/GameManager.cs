@@ -20,6 +20,9 @@ public class GameManager : MonoBehaviour
 
     public GameOverManager gameOverManager;
     public GameUIManager uIManager;
+    public bool moveUsedThisFrame = false;
+    public bool healthLostThisFrame = false;
+
 
     void Start()
     {
@@ -76,6 +79,9 @@ public class GameManager : MonoBehaviour
     {
         if (gameMode != GameMode.Moves) return;
 
+        if (moveUsedThisFrame) return;
+
+        moveUsedThisFrame = true;
         movesLeft--;
         uIManager.UpdateMovesUI(movesLeft);
     }
@@ -88,6 +94,12 @@ public class GameManager : MonoBehaviour
             gameOverManager.ShowGameOver();
             Time.timeScale = 0f;
         }
+    }
+
+    void LateUpdate()
+    {
+        // Her frame sonunda sıfırlanır
+        moveUsedThisFrame = false;
     }
 
     // ---- Collectible ----

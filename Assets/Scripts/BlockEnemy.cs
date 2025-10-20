@@ -1,10 +1,16 @@
 using UnityEngine;
 using UnityEngine.Splines;
+
 public class BlockEnemy : MonoBehaviour
 {
     public enum EnemyType
     {
-        Rotate, MoveUpDown, Static, SplineFollow, Pacman
+        Rotate,
+        MoveUpDown,
+        Static,
+        SplineFollow,
+        SplineFollowRotate, // ✅ Yeni tip
+        Pacman
     }
 
     [Header("Enemy Settings")]
@@ -16,10 +22,13 @@ public class BlockEnemy : MonoBehaviour
 
     [Header("Spline Settings")]
     public SplineContainer spline;
-    public SplineSettings splineSettings; 
+    public SplineSettings splineSettings;
     public float splineSpeed = 0.2f;
-    private float splineT = 0f;
     public float direction = 1f;
+    private float splineT = 0f;
+
+    [Header("Extra Rotation")]
+    public bool rotateWhileSpline = true; // ✅ Ekstra döndürme aç/kapat
 
     void Start()
     {
@@ -44,6 +53,12 @@ public class BlockEnemy : MonoBehaviour
             case EnemyType.SplineFollow:
                 FollowSpline();
                 break;
+
+            case EnemyType.SplineFollowRotate:
+                FollowSplineOnlyPosition(); // sadece pozisyon güncelle
+                RotateEnemy();              // kendi etrafında dön
+                break;
+
             case EnemyType.Pacman:
                 Pacman();
                 break;
@@ -61,29 +76,59 @@ public class BlockEnemy : MonoBehaviour
         transform.position = new Vector3(startPos.x, newY, startPos.z);
     }
 
+    void FollowSpline()
+    {
+        if (spline == null) return;
+
+        splineT += direction * splineSpeed * Time.deltaTime;
+        splineT = Mathf.Repeat(splineT, 1f);
+
+        Vector3 pos = spline.EvaluatePosition(splineT);
+        transform.position = pos;
+
+        Vector3 tangent = spline.EvaluateTangent(splineT);
+        if (tangent != Vector3.zero)
+        {
+            Quaternion targetRot = Quaternion.LookRotation(tangent);
+            targetRot *= Quaternion.Euler(0, 90, 90);
+            transform.rotation = targetRot;
+        }
+    }
+
+    void FollowSplineOnlyPosition()
+    {
+        if (spline == null) return;
+
+        splineT += direction * splineSpeed * Time.deltaTime;
+        splineT = Mathf.Repeat(splineT, 1f);
+
+        Vector3 pos = spline.EvaluatePosition(splineT);
+        pos.z = 0f;
+        transform.position = pos;
+    }
+
+
     void Pacman()
     {
         splineT += direction * splineSpeed * Time.deltaTime;
 
         if (splineSettings.isClosed)
         {
-                if (splineT > 1f)
-                    splineT -= 1f;
-                else if (splineT < 0f)
-                    splineT += 1f;
+            if (splineT > 1f) splineT -= 1f;
+            else if (splineT < 0f) splineT += 1f;
         }
         else
         {
-                if (splineT >= 1f)
-                {
-                    splineT = 1f;
-                    direction = -1f;
-                }
-                else if (splineT <= 0f)
-                {
-                    splineT = 0f;
-                    direction = 1f;
-                }
+            if (splineT >= 1f)
+            {
+                splineT = 1f;
+                direction = -1f;
+            }
+            else if (splineT <= 0f)
+            {
+                splineT = 0f;
+                direction = 1f;
+            }
         }
 
         Vector3 tangent = spline.EvaluateTangent(splineT);
@@ -94,23 +139,5 @@ public class BlockEnemy : MonoBehaviour
 
         if (tangent != Vector3.zero)
             transform.rotation = Quaternion.LookRotation(Vector3.forward, tangent);
-    }
-
-    void FollowSpline()
-    {
-        if (spline == null) return;
-
-        splineT += direction * splineSpeed * Time.deltaTime;
-        splineT = Mathf.Repeat(splineT, 1f);
-        Vector3 position = spline.EvaluatePosition(splineT);
-        transform.position = position;
-
-        Vector3 tangent = spline.EvaluateTangent(splineT) * direction;
-        if (tangent != Vector3.zero)
-        {
-            Quaternion targetRot = Quaternion.LookRotation(tangent);
-            targetRot *= Quaternion.Euler(0, 90, 90);
-            transform.rotation = targetRot;
-        }
     }
 }
