@@ -236,8 +236,15 @@ public class PlayerMovement : MonoBehaviour
                     {
                         GameObject fx = Instantiate(enemyDeathFX, other.transform.position, Quaternion.identity);
                         fx.transform.localScale = other.transform.localScale * 6;
-                        Destroy(fx, 0.3f); 
+                        Destroy(fx, 0.3f);
                         Destroy(other.gameObject);
+
+                        hasShield = false;
+                        GetComponent<SpriteRenderer>().color = Color.white;
+
+                        var sprite = PlayerFX.GetComponent<SpriteRenderer>();
+                        sprite.color = Color.white;
+                        
                     }
                     else
                     {
