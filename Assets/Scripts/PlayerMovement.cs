@@ -19,7 +19,9 @@ public class PlayerMovement : MonoBehaviour
     public GameObject deathFXPrefab;
     public GameObject enemyDeathFX;
     public GameObject PlayerFX;
-
+    [Header("Audio")]
+    public AudioClip collectSound; // Unity Inspector'dan ses dosyasını buraya sürükle
+    private AudioSource audioSource;
     private List<SplineSettings> splineSettingsList = new List<SplineSettings>();
     private SplineSettings currentSplineSettings;
     private float t = 0f;
@@ -50,6 +52,8 @@ public class PlayerMovement : MonoBehaviour
             currentSplineSettings = splineSettingsList[0];
             currentSpline = currentSplineSettings.GetSpline();
         }
+
+        audioSource = GetComponent<AudioSource>();
     }
 
     void Update()
@@ -182,6 +186,12 @@ public class PlayerMovement : MonoBehaviour
         if (other.CompareTag("Collectible"))
         {
             Collectibles col = other.GetComponent<Collectibles>();
+
+            if (collectSound != null && audioSource != null)
+    {
+                // PlayOneShot, seslerin üst üste binmesine izin verir (hızlı toplarsan kesilmez)
+                audioSource.PlayOneShot(collectSound);
+            }
 
             // 🔹 FX oluştur
             if (collectFXPrefab != null)
