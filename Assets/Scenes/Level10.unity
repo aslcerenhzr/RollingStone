@@ -2315,6 +2315,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1278391658}
     - target: {fileID: 2369316444605044918, guid: 5e4023efef8b8f74e9299b963663188f, type: 3}
+      propertyPath: detachedSpeed
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 2369316444605044918, guid: 5e4023efef8b8f74e9299b963663188f, type: 3}
       propertyPath: gameOverManager
       value: 
       objectReference: {fileID: 806271354}

@@ -8,6 +8,10 @@ TagManager:
   - Line
   - Enemy
   - Background
+  - Corner
+  - a
+  - b
+  - c
   layers:
   - Default
   - TransparentFX

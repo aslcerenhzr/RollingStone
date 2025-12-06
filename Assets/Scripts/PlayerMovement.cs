@@ -19,19 +19,31 @@ public class PlayerMovement : MonoBehaviour
     public GameObject deathFXPrefab;
     public GameObject enemyDeathFX;
     public GameObject PlayerFX;
+
     [Header("Audio")]
-    public AudioClip collectSound; // Unity Inspector'dan ses dosyasını buraya sürükle
+    public AudioClip collectSound;
     private AudioSource audioSource;
+
     private List<SplineSettings> splineSettingsList = new List<SplineSettings>();
     private SplineSettings currentSplineSettings;
+
     private float t = 0f;
-    private float tDirection = 1f; // 1 = ileri, -1 = geri
+    private float tDirection = 1f;
     private PlayerInput playerInput;
     private InputAction clickAction;
+
     private bool detached = false;
     private bool hasShield = false;
     private Vector3 detachedDirection;
+
     private List<GameObject> collectedTemp = new List<GameObject>();
+
+    private float detachLockTimer = 0f;
+    private int lastReconnectFrame = -9999;
+
+    // 🔶 CORNER SYSTEM
+    private bool isInsideCorner = false;        // Sadece corner bool
+    private bool waitingForCornerSwitch = false; // Corner içinde detach olunduysa true
 
     void Awake()
     {
@@ -44,9 +56,7 @@ public class PlayerMovement : MonoBehaviour
         splineSettingsList.AddRange(FindObjectsOfType<SplineSettings>());
 
         if (currentSpline != null)
-        {
             currentSplineSettings = currentSpline.GetComponent<SplineSettings>();
-        }
         else if (splineSettingsList.Count > 0)
         {
             currentSplineSettings = splineSettingsList[0];
@@ -58,114 +68,74 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        if (detachLockTimer > 0f)
+            detachLockTimer -= Time.deltaTime;
+
+        // Right click → Pause
         if (Mouse.current.rightButton.wasPressedThisFrame)
         {
-            if (gameOverManager != null)
-            {
-                if (Time.timeScale == 0f)
-                    gameOverManager.ResumeGame();
-                else
-                    gameOverManager.PauseGame();
-            }
+            if (Time.timeScale == 0f) gameOverManager.ResumeGame();
+            else gameOverManager.PauseGame();
         }
 
-
+        // -------------------------------
+        // ATTACHED MOVEMENT
+        // -------------------------------
         if (!detached)
         {
-            if (currentSpline == null || currentSplineSettings == null) return;
+            if (currentSplineSettings == null) return;
 
-            // Spline üzerinde ilerleme
             t += tDirection * currentSplineSettings.splineSpeed * Time.deltaTime;
 
             if (currentSplineSettings.isClosed)
             {
-                if (t > 1f)
-                    t -= 1f;
-                else if (t < 0f)
-                    t += 1f;
+                if (t > 1f) t -= 1f;
+                else if (t < 0f) t += 1f;
             }
             else
             {
-                if (t >= 1f)
-                {
-                    t = 1f;
-                    tDirection = -1f;
-                }
-                else if (t <= 0f)
-                {
-                    t = 0f;
-                    tDirection = 1f;
-                }
+                if (t >= 1f) { t = 1f; tDirection = -1f; }
+                else if (t <= 0f) { t = 0f; tDirection = 1f; }
             }
 
-            // pozisyon ve rotasyon
             Vector3 tangent = currentSpline.EvaluateTangent(t);
-            tangent.z = 0f;
             Vector3 pos = currentSpline.EvaluatePosition(t);
-            pos.z = 0f;
+            pos.z = 0;
+
             transform.position = pos;
+            transform.rotation = Quaternion.LookRotation(Vector3.forward, tangent);
 
-            if (tangent != Vector3.zero)
-                transform.rotation = Quaternion.LookRotation(Vector3.forward, tangent);
+            bool frameAllowed = Time.frameCount > lastReconnectFrame + 1;
 
-            // Click action: detach
-            if (clickAction != null && clickAction.WasPerformedThisFrame())
+            // CLICK → DETACH
+            if (detachLockTimer <= 0f && frameAllowed && clickAction.WasPerformedThisFrame())
             {
-                detached = true;
-
-                if (PlayerFX != null)
+                if (!isInsideCorner)
                 {
-                    PlayerFX.SetActive(true);
-
-                    // Sadece shield aktifken fxObject kırmızı olsun
-                    if (hasShield)
-                    {
-                        var sprite = PlayerFX.GetComponent<SpriteRenderer>();
-                        if (sprite != null)
-                        {
-                            sprite.color = Color.red;
-                        }
-                    }
-                }
-
-                if (currentSplineSettings.isClosed)
-                {
-                    // Kapalı spline için mevcut mantık
-                    Vector3 center = currentSplineSettings.GetCenter();
-                    Vector3 toCenter = (center - transform.position).normalized;
-                    Vector3 left = Vector3.Cross(Vector3.forward, tangent).normalized;
-
-                    if (currentSplineSettings.Outward)
-                    {
-                        detachedDirection = (Vector3.Dot(left, toCenter) > 0) ? -left : left;
-                    }
-                    else
-                    {
-                        detachedDirection = (Vector3.Dot(left, toCenter) > 0) ? left : -left;
-                    }
+                    Debug.Log("PM: Normal DETACH");
+                    PerformDetach(tangent);
                 }
                 else
                 {
-                    // Açık spline için sadece sağ yön
-                    Vector3 left = Vector3.Cross(Vector3.forward, tangent).normalized;
-                    detachedDirection = left; // sağ yön
+                    Debug.Log("PM: Detached INSIDE CORNER → waiting for next corner");
+                    waitingForCornerSwitch = true;
+                    PerformDetach(tangent);
                 }
-
-                gameManager.UseMove();
             }
         }
         else
         {
-           
-            // detached hareket
+            // -------------------------------
+            // DETACHED MOVEMENT
+            // -------------------------------
             transform.position += detachedDirection * detachedSpeed * Time.deltaTime;
-            // 🎯 Topun bakış yönünü gidiş yönüne çevir
             transform.right = -detachedDirection.normalized;
 
-            Vector3 viewportPos = Camera.main.WorldToViewportPoint(transform.position);
-            if (viewportPos.x < 0 || viewportPos.x > 1 || viewportPos.y < 0 || viewportPos.y > 1)
+            Vector3 vp = Camera.main.WorldToViewportPoint(transform.position);
+            if (vp.x < 0 || vp.x > 1 || vp.y < 0 || vp.y > 1)
             {
-                if (gameManager.gameMode == GameManager.GameMode.Moves && gameManager.movesLeft <= 0)
+                if (gameManager.gameMode == GameManager.GameMode.Moves &&
+                    gameManager.movesLeft <= 0)
                 {
                     gameManager.NoMovesLeft();
                 }
@@ -174,116 +144,192 @@ public class PlayerMovement : MonoBehaviour
                     PlayDeathFX();
                     gameManager.UpdateHealth();
                     detached = false;
-
                     if (PlayerFX != null) PlayerFX.SetActive(false);
                 }
             }
         }
     }
 
-    void OnTriggerEnter2D(Collider2D other)
+    // -------------------------------------
+    // DETACH
+    // -------------------------------------
+    private void PerformDetach(Vector3 tangent)
     {
-        if (other.CompareTag("Collectible"))
+        detached = true;
+
+        if (PlayerFX != null) PlayerFX.SetActive(true);
+
+        if (currentSplineSettings.isClosed)
         {
-            Collectibles col = other.GetComponent<Collectibles>();
+            Vector3 center = currentSplineSettings.GetCenter();
+            Vector3 toCenter = (center - transform.position).normalized;
+            Vector3 left = Vector3.Cross(Vector3.forward, tangent).normalized;
 
-            if (collectSound != null && audioSource != null)
-    {
-                // PlayOneShot, seslerin üst üste binmesine izin verir (hızlı toplarsan kesilmez)
-                audioSource.PlayOneShot(collectSound);
-            }
-
-            // 🔹 FX oluştur
-            if (collectFXPrefab != null)
-            {
-                GameObject fx = Instantiate(collectFXPrefab, other.transform.position, Quaternion.identity);
-                Destroy(fx, 0.3f); 
-            }
-
-            other.gameObject.SetActive(false);
-            collectedTemp.Add(other.gameObject);
-
-            if (col.collectibleType == Collectibles.CollectibleType.Shield)
-            {
-                hasShield = true;
-                GetComponent<SpriteRenderer>().color = Color.red;
-            }
+            detachedDirection =
+                (Vector3.Dot(left, toCenter) > 0)
+                ? (currentSplineSettings.Outward ? -left : left)
+                : (currentSplineSettings.Outward ? left : -left);
         }
         else
         {
-            if (gameManager.gameMode == GameManager.GameMode.Moves && gameManager.movesLeft <= 0)
+            detachedDirection = Vector3.Cross(Vector3.forward, tangent).normalized;
+        }
+
+        gameManager.UseMove();
+    }
+
+    // -------------------------------------
+    // ON TRIGGER ENTER
+    // -------------------------------------
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        Debug.Log("ENTER: " + other.tag);
+
+        // -------------------------
+        // CORNER ENTER
+        // -------------------------
+        if (other.CompareTag("Corner"))
+        {
+            isInsideCorner = true;
+
+            // Eğer corner içinde detach olduysak
+            if (waitingForCornerSwitch && detached)
             {
-                gameManager.NoMovesLeft();
+                Debug.Log("PM: CORNER HIT WHILE WAITING → Reconnecting!");
+                ReconnectToSpline();
+                return;
             }
-            else
-            {
-                if (other.CompareTag("Line") && detached)
-                {
-                    foreach (GameObject c in collectedTemp)
-                    {
-                        gameManager.UpdateCollectible();
-                        Destroy(c);
-                    }
-                    collectedTemp.Clear();
 
-                    SplineSettings newSettings = other.GetComponent<SplineSettings>();
-                    if (newSettings != null)
-                    {
-                        detached = false;
-                        if (PlayerFX != null) PlayerFX.SetActive(false);
-                        CameraShakerHandler.Shake(cameraShake);
+            return;
+        }
 
-                        currentSplineSettings = newSettings;
-                        currentSpline = newSettings.GetSpline();
-                        t = currentSplineSettings.FindClosestT(transform.position);
-                        tDirection = tDirection * -1;
-                    }
-                }
+        // -------------------------
+        // CORNER EXIT LOGIC
+        // (Corner olmayan bir şeye çarptıysan ve corner içindeysen çıkmışsındır)
+        // -------------------------
+        if (isInsideCorner && !other.CompareTag("Corner"))
+        {
+            Debug.Log("PM: EXIT CORNER");
+            isInsideCorner = false;
+        }
 
-                if (other.CompareTag("Enemy"))
-                {
-                    if (hasShield == true)
-                    {
-                        GameObject fx = Instantiate(enemyDeathFX, other.transform.position, Quaternion.identity);
-                        fx.transform.localScale = other.transform.localScale * 6;
-                        Destroy(fx, 0.3f);
-                        Destroy(other.gameObject);
+        // -------------------------
+        // LINE → Reconnect
+        // -------------------------
+        if (other.CompareTag("Line") && detached)
+        {
+            ReconnectToSpline();
+            return;
+        }
 
-                        hasShield = false;
-                        GetComponent<SpriteRenderer>().color = Color.white;
+        // -------------------------
+        // COLLECTIBLE
+        // -------------------------
+        if (other.CompareTag("Collectible"))
+        {
+            HandleCollectible(other);
+            return;
+        }
 
-                        var sprite = PlayerFX.GetComponent<SpriteRenderer>();
-                        sprite.color = Color.white;
-                        
-                    }
-                    else
-                    {
-                        // 🔹 Enemy'e çarptığında collectible'lar geri gelsin
-                        foreach (GameObject c in collectedTemp)
-                        {
-                            c.SetActive(true);
-                        }
-                        collectedTemp.Clear();
-
-                        detached = false;
-                        if (PlayerFX != null) PlayerFX.SetActive(false);
-
-                        PlayDeathFX();
-                        gameManager.UpdateHealth();
-                    }
-                }
-            }
+        // -------------------------
+        // ENEMY
+        // -------------------------
+        if (other.CompareTag("Enemy"))
+        {
+            HandleEnemyCollision(other);
+            return;
         }
     }
 
+    // -------------------------------------
+    // RECONNECT
+    // -------------------------------------
+    private void ReconnectToSpline()
+    {
+        foreach (GameObject c in collectedTemp)
+        {
+            gameManager.UpdateCollectible();
+            Destroy(c);
+        }
+        collectedTemp.Clear();
+
+        detached = false;
+        waitingForCornerSwitch = false;
+        isInsideCorner = false;
+
+        if (PlayerFX != null) PlayerFX.SetActive(false);
+
+        CameraShakerHandler.Shake(cameraShake);
+
+        t = currentSplineSettings.FindClosestT(transform.position);
+        tDirection *= -1;
+
+        lastReconnectFrame = Time.frameCount;
+        detachLockTimer = 0.15f;
+    }
+
+    // -------------------------------------
+    // COLLECTIBLE
+    // -------------------------------------
+    private void HandleCollectible(Collider2D other)
+    {
+        Collectibles col = other.GetComponent<Collectibles>();
+
+        if (collectSound != null) audioSource.PlayOneShot(collectSound);
+
+        if (collectFXPrefab != null)
+        {
+            var fx = Instantiate(collectFXPrefab, other.transform.position, Quaternion.identity);
+            Destroy(fx, 0.3f);
+        }
+
+        other.gameObject.SetActive(false);
+        collectedTemp.Add(other.gameObject);
+
+        if (col.collectibleType == Collectibles.CollectibleType.Shield)
+        {
+            hasShield = true;
+            GetComponent<SpriteRenderer>().color = Color.red;
+        }
+    }
+
+    // -------------------------------------
+    // ENEMY
+    // -------------------------------------
+    private void HandleEnemyCollision(Collider2D other)
+    {
+        if (hasShield)
+        {
+            var fx = Instantiate(enemyDeathFX, other.transform.position, Quaternion.identity);
+            fx.transform.localScale = other.transform.localScale * 6;
+            Destroy(fx, 0.3f);
+            Destroy(other.gameObject);
+
+            hasShield = false;
+            GetComponent<SpriteRenderer>().color = Color.white;
+        }
+        else
+        {
+            foreach (GameObject c in collectedTemp)
+                c.SetActive(true);
+
+            collectedTemp.Clear();
+
+            detached = false;
+            if (PlayerFX != null) PlayerFX.SetActive(false);
+
+            PlayDeathFX();
+            gameManager.UpdateHealth();
+        }
+    }
 
     private void PlayDeathFX()
     {
         if (deathFXPrefab != null)
         {
             CameraShakerHandler.Shake(cameraShake);
-            GameObject fx = Instantiate(deathFXPrefab, transform.position, Quaternion.identity);
-            Destroy(fx, 0.2f); // 2 saniye sonra otomatik sil
+            var fx = Instantiate(deathFXPrefab, transform.position, Quaternion.identity);
+            Destroy(fx, 0.2f);
         }
     }
 }
