@@ -8,6 +8,7 @@ public class PlayerMovement : MonoBehaviour
 {
     public GameManager gameManager;
     public GameOverManager gameOverManager;
+
     public SplineContainer currentSpline;
     public ShakeData cameraShake;
 
@@ -24,73 +25,141 @@ public class PlayerMovement : MonoBehaviour
     public AudioClip collectSound;
     private AudioSource audioSource;
 
+    public SplineSettings currentSplineSettings;
     private List<SplineSettings> splineSettingsList = new List<SplineSettings>();
-    private SplineSettings currentSplineSettings;
 
     private float t = 0f;
     private float tDirection = 1f;
+
     private PlayerInput playerInput;
     private InputAction clickAction;
+    
+    // Input System için doğrudan InputActionAsset kullan (tüm klonlar için çalışır)
+    private InputActionAsset inputActions;
+    private InputActionMap playerActionMap;
+    private InputAction directClickAction;
 
     private bool detached = false;
     private bool hasShield = false;
     private Vector3 detachedDirection;
 
-    private List<GameObject> collectedTemp = new List<GameObject>();
+    // Public getter/setter for cloning
+    public bool Detached { get => detached; set => detached = value; }
+    public Vector3 DetachedDirection { get => detachedDirection; set => detachedDirection = value; }
 
     private float detachLockTimer = 0f;
     private int lastReconnectFrame = -9999;
+    private float portalCooldown = 0f;
+    private int lastPortalID = -1;
 
-    // 🔶 CORNER SYSTEM
-    private bool isInsideCorner = false;        // Sadece corner bool
-    private bool waitingForCornerSwitch = false; // Corner içinde detach olunduysa true
+    private List<GameObject> collectedTemp = new List<GameObject>();
+
+    // CORNER SYSTEM
+    private bool isInsideCorner = false;
+    private bool waitingForCornerSwitch = false;
+
+    // Rigidbody
+    private Rigidbody2D rb;
+
 
     void Awake()
     {
+        rb = GetComponent<Rigidbody2D>();
+        rb.gravityScale = 0f;
+        rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+
         playerInput = GetComponent<PlayerInput>();
-        clickAction = playerInput.actions["Click"];
+        if (playerInput != null)
+        {
+            clickAction = playerInput.actions["Click"];
+            // InputActionAsset'i de al (klonlar için)
+            inputActions = playerInput.actions;
+            if (inputActions != null)
+            {
+                playerActionMap = inputActions.FindActionMap("Player");
+                if (playerActionMap != null)
+                {
+                    directClickAction = playerActionMap.FindAction("Click");
+                    if (directClickAction != null)
+                    {
+                        directClickAction.Enable();
+                    }
+                }
+            }
+        }
+
+        Debug.Log("[INIT] PlayerMovement Awake()");
     }
 
     void Start()
     {
+        Debug.Log("[INIT] PlayerMovement Start()");
+
         splineSettingsList.AddRange(FindObjectsOfType<SplineSettings>());
+        Debug.Log("[INIT] Toplam spline settings sayısı: " + splineSettingsList.Count);
 
         if (currentSpline != null)
+        {
             currentSplineSettings = currentSpline.GetComponent<SplineSettings>();
+            Debug.Log("[INIT] Başlangıç spline mevcut: " + currentSpline.name);
+        }
         else if (splineSettingsList.Count > 0)
         {
             currentSplineSettings = splineSettingsList[0];
             currentSpline = currentSplineSettings.GetSpline();
+            Debug.Log("[INIT] currentSpline null idi, ilk spline atandı: " + currentSplineSettings.name);
+        }
+        else
+        {
+            Debug.LogError("[INIT] Hiç spline bulunamadı! Hareket edemez.");
         }
 
         audioSource = GetComponent<AudioSource>();
     }
 
+    // -------------------------------------------------------
+    // FIXED UPDATE — detached physics movement
+    // -------------------------------------------------------
+    void FixedUpdate()
+    {
+        if (detached)
+        {
+            rb.linearVelocity = detachedDirection * detachedSpeed;
+            transform.right = -detachedDirection.normalized;
+
+            Debug.Log("[DETACHED MOVE] pos=" + transform.position + " dir=" + detachedDirection);
+
+        }
+    }
+
+
+    // -------------------------------------------------------
+    // UPDATE — spline movement + detach inputs
+    // -------------------------------------------------------
     void Update()
     {
         if (detachLockTimer > 0f)
             detachLockTimer -= Time.deltaTime;
 
-        // Right click → Pause
-        if (Mouse.current.rightButton.wasPressedThisFrame)
-        {
-            if (Time.timeScale == 0f) gameOverManager.ResumeGame();
-            else gameOverManager.PauseGame();
-        }
+        if (portalCooldown > 0f)
+            portalCooldown -= Time.deltaTime;
 
-        // -------------------------------
-        // ATTACHED MOVEMENT
-        // -------------------------------
+        // ATTACHED SPLINE MOVEMENT
         if (!detached)
         {
-            if (currentSplineSettings == null) return;
+            if (currentSplineSettings == null)
+            {
+                Debug.LogError("[ERROR] currentSplineSettings NULL!");
+                return;
+            }
 
             t += tDirection * currentSplineSettings.splineSpeed * Time.deltaTime;
 
             if (currentSplineSettings.isClosed)
             {
                 if (t > 1f) t -= 1f;
-                else if (t < 0f) t += 1f;
+                if (t < 0f) t += 1f;
             }
             else
             {
@@ -107,17 +176,42 @@ public class PlayerMovement : MonoBehaviour
 
             bool frameAllowed = Time.frameCount > lastReconnectFrame + 1;
 
-            // CLICK → DETACH
-            if (detachLockTimer <= 0f && frameAllowed && clickAction.WasPerformedThisFrame())
+            // Input kontrolü - Input System kullan (tüm klonlar için çalışır)
+            bool clickPressed = false;
+            if (directClickAction != null)
+            {
+                // Doğrudan InputAction kullan (klonlar için)
+                clickPressed = directClickAction.WasPerformedThisFrame();
+            }
+            else if (clickAction != null)
+            {
+                // PlayerInput üzerinden InputAction kullan
+                clickPressed = clickAction.WasPerformedThisFrame();
+            }
+
+            // INPUT DEBUG
+            if (clickPressed)
+            {
+                Debug.Log("[INPUT] Click algılandı. detached=" + detached +
+                          " | detachLockTimer=" + detachLockTimer +
+                          " | frameAllowed=" + frameAllowed +
+                          " | isInsideCorner=" + isInsideCorner +
+                          " | waitingForCornerSwitch=" + waitingForCornerSwitch);
+            }
+
+            // DETACH
+            if (detachLockTimer <= 0f &&
+                frameAllowed &&
+                clickPressed)
             {
                 if (!isInsideCorner)
                 {
-                    Debug.Log("PM: Normal DETACH");
+                    Debug.Log("[DETACH] Normal detach.");
                     PerformDetach(tangent);
                 }
                 else
                 {
-                    Debug.Log("PM: Detached INSIDE CORNER → waiting for next corner");
+                    Debug.Log("[DETACH] Corner içindeyiz → corner switch modu.");
                     waitingForCornerSwitch = true;
                     PerformDetach(tangent);
                 }
@@ -125,18 +219,16 @@ public class PlayerMovement : MonoBehaviour
         }
         else
         {
-            // -------------------------------
-            // DETACHED MOVEMENT
-            // -------------------------------
-            transform.position += detachedDirection * detachedSpeed * Time.deltaTime;
-            transform.right = -detachedDirection.normalized;
-
+            // OFF-SCREEN CHECK
             Vector3 vp = Camera.main.WorldToViewportPoint(transform.position);
             if (vp.x < 0 || vp.x > 1 || vp.y < 0 || vp.y > 1)
             {
+                Debug.Log("[DEATH] Oyuncu ekran dışına çıktı!");
+
                 if (gameManager.gameMode == GameManager.GameMode.Moves &&
                     gameManager.movesLeft <= 0)
                 {
+                    Debug.Log("[DEATH] Moves bitti!");
                     gameManager.NoMovesLeft();
                 }
                 else
@@ -144,19 +236,19 @@ public class PlayerMovement : MonoBehaviour
                     PlayDeathFX();
                     gameManager.UpdateHealth();
                     detached = false;
-                    if (PlayerFX != null) PlayerFX.SetActive(false);
                 }
             }
         }
     }
 
-    // -------------------------------------
+    // -------------------------------------------------------
     // DETACH
-    // -------------------------------------
+    // -------------------------------------------------------
     private void PerformDetach(Vector3 tangent)
     {
-        detached = true;
+        Debug.Log("[DETACH] PerformDetach çağrıldı. tangent=" + tangent);
 
+        detached = true;
         if (PlayerFX != null) PlayerFX.SetActive(true);
 
         if (currentSplineSettings.isClosed)
@@ -169,83 +261,161 @@ public class PlayerMovement : MonoBehaviour
                 (Vector3.Dot(left, toCenter) > 0)
                 ? (currentSplineSettings.Outward ? -left : left)
                 : (currentSplineSettings.Outward ? left : -left);
+            rb.linearVelocity = detachedDirection * detachedSpeed;
+
+            Debug.Log("[DETACH] Kapalı spline yön → detachedDirection=" + detachedDirection);
         }
         else
         {
             detachedDirection = Vector3.Cross(Vector3.forward, tangent).normalized;
+            Debug.Log("[DETACH] Açık spline yön, detachedDirection=" + detachedDirection);
         }
 
         gameManager.UseMove();
     }
 
-    // -------------------------------------
-    // ON TRIGGER ENTER
-    // -------------------------------------
+    // -------------------------------------------------------
+    // TRIGGER ENTER
+    // -------------------------------------------------------
     private void OnTriggerEnter2D(Collider2D other)
     {
-        Debug.Log("ENTER: " + other.tag);
+        Debug.Log("[TRIGGER] Enter → " + other.tag + " | detached=" + detached);
+        Debug.Log("[TRIGGER] Enter → " + other);
 
-        // -------------------------
-        // CORNER ENTER
-        // -------------------------
+        if (other.CompareTag("Bounce"))
+        {
+            BounceTrigger bounce = other.GetComponent<BounceTrigger>();
+            if (bounce != null && detached)
+            {
+                // Player'ın mevcut velocity'sine göre çarptığı yüzeyin normalini al
+                Vector2 oldVelocity = rb.linearVelocity;
+                Vector2 normal = bounce.GetBounceNormal(oldVelocity);
+                
+                // Velocity'yi normale göre sektir
+                Vector2 reflected = Vector2.Reflect(oldVelocity, normal);
+                Vector2 newVelocity = reflected.normalized * bounce.bounceStrength;
+                
+                // Hem velocity hem de direction'ı güncelle
+                rb.linearVelocity = newVelocity;
+                detachedDirection = newVelocity.normalized;
+                
+                Debug.Log("[BOUNCE] Old Velocity = " + oldVelocity + " | Normal = " + normal + " | New Velocity = " + newVelocity + " | New Direction = " + detachedDirection);
+            }
+        }
+
+        // PORTAL
+        if (other.CompareTag("Portal"))
+        {
+            Portal portal = other.GetComponent<Portal>();
+            if (portal != null && detached && portalCooldown <= 0f)
+            {
+                Portal otherPortal = portal.GetOtherPortal();
+                if (otherPortal != null)
+                {
+
+                    Debug.Log("[PORTAL] Portal ID " + portal.portalID + " → Diğer portala ışınlanıyor");
+                    
+                    // Diğer portaldan çıkış yönünü al
+                    Vector2 exitDirection = otherPortal.GetExitDirection();
+                    
+                    // Player'ı diğer portala taşı
+                    transform.position = otherPortal.transform.position;
+                    
+                    // Velocity'yi çıkış yönüne göre ayarla
+                    Vector2 newVelocity = exitDirection.normalized * rb.linearVelocity.magnitude;
+                    rb.linearVelocity = newVelocity;
+                    detachedDirection = exitDirection.normalized;
+                    
+                    // Cooldown ve son portal ID'sini kaydet
+                    portalCooldown = 0.5f; // 0.5 saniye cooldown
+                    lastPortalID = portal.portalID;
+                    
+                    Debug.Log("[PORTAL] Yeni pozisyon = " + transform.position + " | Yeni yön = " + exitDirection);
+                }
+                else
+                {
+                    Debug.LogWarning("[PORTAL] Portal ID " + portal.portalID + " için başka portal bulunamadı!");
+                }
+            }
+        }
+
+        // TRIPLE CLONE
+        if (other.CompareTag("TripleClone"))
+        {
+            TripleClone tripleClone = other.GetComponent<TripleClone>();
+            if (tripleClone != null && detached)
+            {
+                tripleClone.SplitPlayer(gameObject);
+            }
+        }
+
+        // CORNER
         if (other.CompareTag("Corner"))
         {
+            Debug.Log("[CORNER] Corner bölgesine girildi.");
             isInsideCorner = true;
 
-            // Eğer corner içinde detach olduysak
             if (waitingForCornerSwitch && detached)
             {
-                Debug.Log("PM: CORNER HIT WHILE WAITING → Reconnecting!");
+                Debug.Log("[CORNER] Corner switch tetiklendi → reconnect");
                 ReconnectToSpline();
-                return;
             }
-
             return;
         }
 
-        // -------------------------
-        // CORNER EXIT LOGIC
-        // (Corner olmayan bir şeye çarptıysan ve corner içindeysen çıkmışsındır)
-        // -------------------------
+        // EXIT CORNER
         if (isInsideCorner && !other.CompareTag("Corner"))
         {
-            Debug.Log("PM: EXIT CORNER");
+            Debug.Log("[CORNER] Corner'dan çıkıldı.");
             isInsideCorner = false;
         }
 
-        // -------------------------
-        // LINE → Reconnect
-        // -------------------------
+        // LINE
         if (other.CompareTag("Line") && detached)
         {
+            Debug.Log("[LINE] Line ile çarpışıldı → bağlanmaya çalışılıyor.");
+
+            var splineRef = other.GetComponent<SplineSettings>();
+
+            if (splineRef == null)
+            {
+                Debug.LogError("[LINE] SplineSettings bulunamadı!");
+            }
+            else
+            {
+                Debug.Log("[LINE] SplineSettings bulundu: " + splineRef.name);
+                currentSpline = splineRef.spline;
+                currentSplineSettings = currentSpline.GetComponent<SplineSettings>();
+            }
+
             ReconnectToSpline();
             return;
         }
 
-        // -------------------------
-        // COLLECTIBLE
-        // -------------------------
+        // ITEMS
         if (other.CompareTag("Collectible"))
         {
+            Debug.Log("[ITEM] Collectible alındı: " + other.name);
             HandleCollectible(other);
             return;
         }
 
-        // -------------------------
         // ENEMY
-        // -------------------------
         if (other.CompareTag("Enemy"))
         {
+            Debug.Log("[ENEMY] Enemy ile çarpışma!");
             HandleEnemyCollision(other);
             return;
         }
     }
 
-    // -------------------------------------
-    // RECONNECT
-    // -------------------------------------
+    // -------------------------------------------------------
+    // RECONNECT TO SPLINE
+    // -------------------------------------------------------
     private void ReconnectToSpline()
     {
+        Debug.Log("[RECONNECT] ReconnectToSpline() çağrıldı.");
+
         foreach (GameObject c in collectedTemp)
         {
             gameManager.UpdateCollectible();
@@ -261,16 +431,27 @@ public class PlayerMovement : MonoBehaviour
 
         CameraShakerHandler.Shake(cameraShake);
 
+        if (currentSplineSettings == null)
+        {
+            Debug.LogError("[RECONNECT] currentSplineSettings NULL!");
+            return;
+        }
+
+        float oldT = t;
         t = currentSplineSettings.FindClosestT(transform.position);
+
+        Debug.Log("[RECONNECT] t eski=" + oldT + " → yeni=" + t);
+
         tDirection *= -1;
+        Debug.Log("[RECONNECT] tDirection now=" + tDirection);
 
         lastReconnectFrame = Time.frameCount;
         detachLockTimer = 0.15f;
+
+        Debug.Log("[RECONNECT] reconnect tamamlandı.");
     }
 
-    // -------------------------------------
-    // COLLECTIBLE
-    // -------------------------------------
+    // -------------------------------------------------------
     private void HandleCollectible(Collider2D other)
     {
         Collectibles col = other.GetComponent<Collectibles>();
@@ -293,9 +474,6 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    // -------------------------------------
-    // ENEMY
-    // -------------------------------------
     private void HandleEnemyCollision(Collider2D other)
     {
         if (hasShield)

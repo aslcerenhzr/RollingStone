@@ -1667,12 +1667,24 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 199597958}
     - target: {fileID: 2369316444605044918, guid: 5e4023efef8b8f74e9299b963663188f, type: 3}
+      propertyPath: detachedSpeed
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 2369316444605044918, guid: 5e4023efef8b8f74e9299b963663188f, type: 3}
       propertyPath: gameOverManager
       value: 
       objectReference: {fileID: 806271354}
     - target: {fileID: 4664951055200040684, guid: 5e4023efef8b8f74e9299b963663188f, type: 3}
       propertyPath: m_Name
       value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 7308591619109894087, guid: 5e4023efef8b8f74e9299b963663188f, type: 3}
+      propertyPath: m_Interpolate
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7308591619109894087, guid: 5e4023efef8b8f74e9299b963663188f, type: 3}
+      propertyPath: m_CollisionDetection
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7713272348978716826, guid: 5e4023efef8b8f74e9299b963663188f, type: 3}
       propertyPath: m_LocalScale.x

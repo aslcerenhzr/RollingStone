@@ -9,9 +9,9 @@ TagManager:
   - Enemy
   - Background
   - Corner
-  - a
-  - b
-  - c
+  - Bounce
+  - Portal
+  - TripleClone
   layers:
   - Default
   - TransparentFX

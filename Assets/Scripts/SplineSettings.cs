@@ -6,7 +6,7 @@ public class SplineSettings : MonoBehaviour
     public bool Outward = false;
     public bool isClosed = true;
     public float splineSpeed = 0.7f;
-    private SplineContainer spline;
+    public SplineContainer spline;
 
     void Awake()
     {
