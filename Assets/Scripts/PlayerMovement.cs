@@ -13,7 +13,7 @@ public class PlayerMovement : MonoBehaviour
     public ShakeData cameraShake;
 
     [Header("Movement")]
-    public float detachedSpeed = 5f;
+    public float detachedSpeed = 10f;
 
     [Header("FX")]
     public GameObject collectFXPrefab;
