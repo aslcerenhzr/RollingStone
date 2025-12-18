@@ -17,10 +17,38 @@ public class GameOverManager : MonoBehaviour
     public GameObject warningPanel;
     public GameObject pausePanel;
     public CanvasGroup warningCanvas;
+    [Tooltip("Eski kullanım. Boş bırakabilirsin; script sahnedeki tüm PlayerMovement'ları bulup hepsine uygular.")]
     public PlayerMovement player;
     public TMP_Text coinsText;
+    [Header("UI Texts")]
+    public TMP_Text gameOverReasonText;
 
+    private PlayerMovement[] GetAllPlayers()
+    {
+        return FindObjectsOfType<PlayerMovement>();
+    }
 
+    private void SetAllPlayersInputEnabled(bool enabled)
+    {
+        var players = GetAllPlayers();
+        if (players != null && players.Length > 0)
+        {
+            for (int i = 0; i < players.Length; i++)
+            {
+                if (players[i] == null) continue;
+                var pi = players[i].GetComponent<PlayerInput>();
+                if (pi != null) pi.enabled = enabled;
+            }
+            return;
+        }
+
+        // Fallback: sahnede PlayerMovement bulunamazsa eski referansı dene
+        if (player != null)
+        {
+            var pi = player.GetComponent<PlayerInput>();
+            if (pi != null) pi.enabled = enabled;
+        }
+    }
 
     public void ShowWarning()
     {
@@ -58,7 +86,7 @@ public class GameOverManager : MonoBehaviour
         Time.timeScale = 0f;
         winPanel.SetActive(true);
 
-        player.GetComponent<PlayerInput>().enabled = false;
+        SetAllPlayersInputEnabled(false);
 
         string currentName = SceneManager.GetActiveScene().name;
         string numberPart = currentName.Replace("Level", "");
@@ -73,7 +101,27 @@ public class GameOverManager : MonoBehaviour
         Time.timeScale = 0f;
         GameOverPanel.SetActive(true);
 
-        player.GetComponent<PlayerInput>().enabled = false;
+        SetAllPlayersInputEnabled(false);
+
+        if (gameOverReasonText != null && gameManager != null)
+        {
+            string reason = "Game Over.";
+
+            if (gameManager.diedByHealth)
+            {
+                reason = "You ran out of lives.";
+            }
+            else if (gameManager.gameMode == GameManager.GameMode.Moves)
+            {
+                reason = "You ran out of moves.";
+            }
+            else if (gameManager.gameMode == GameManager.GameMode.Timer)
+            {
+                reason = "Time's up.";
+            }
+
+            gameOverReasonText.text = reason;
+        }
     }
 
     public void RestartLevel()
@@ -197,21 +245,21 @@ public class GameOverManager : MonoBehaviour
         bonusPanel.SetActive(false);
         Time.timeScale = 1f;
         GameOverPanel.SetActive(false);
-        player.GetComponent<PlayerInput>().enabled = true;
+        SetAllPlayersInputEnabled(true);
     }
 
     public void PauseGame()
     {
         Time.timeScale = 0f;
         pausePanel.SetActive(true);
-        player.GetComponent<PlayerInput>().enabled = false;
+        SetAllPlayersInputEnabled(false);
     }
 
     public void ResumeGame()
     {
         pausePanel.SetActive(false);
         Time.timeScale = 1f;
-        player.GetComponent<PlayerInput>().enabled = true;
+        SetAllPlayersInputEnabled(true);
     }
     
 

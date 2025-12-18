@@ -61,6 +61,19 @@ public class PlayerMovement : MonoBehaviour
     // Rigidbody
     private Rigidbody2D rb;
 
+    private static bool AreAllPlayersAttached()
+    {
+        // Sahnedeki tüm player'lar line'a bağlandı mı?
+        // (Clone'lar dahil: hepsi Detached=false olmalı)
+        PlayerMovement[] players = FindObjectsOfType<PlayerMovement>();
+        for (int i = 0; i < players.Length; i++)
+        {
+            if (players[i] != null && players[i].Detached)
+                return false;
+        }
+        return true;
+    }
+
 
     void Awake()
     {
@@ -235,8 +248,11 @@ public class PlayerMovement : MonoBehaviour
                 {
                     PlayDeathFX();
                     gameManager.UpdateHealth();
-                    detached = false;
                 }
+
+                // Ekran dışına çıkınca player FX'i kapat ve hareketi durdur
+                if (PlayerFX != null) PlayerFX.SetActive(false);
+                detached = false;
             }
         }
     }
@@ -271,7 +287,11 @@ public class PlayerMovement : MonoBehaviour
             Debug.Log("[DETACH] Açık spline yön, detachedDirection=" + detachedDirection);
         }
 
-        gameManager.UseMove();
+        // Moves modunda her detach'te hamleyi düşür
+        if (gameManager != null && gameManager.gameMode == GameManager.GameMode.Moves)
+        {
+            gameManager.UseMove();
+        }
     }
 
     // -------------------------------------------------------
@@ -449,6 +469,23 @@ public class PlayerMovement : MonoBehaviour
         detachLockTimer = 0.15f;
 
         Debug.Log("[RECONNECT] reconnect tamamlandı.");
+
+        // Moves modunda hamle kalmadıysa NoMovesLeft çağır
+        if (gameManager != null &&
+            gameManager.gameMode == GameManager.GameMode.Moves &&
+            gameManager.movesLeft <= 0)
+        {
+            // Çoklu player varsa: hepsi line'a bağlandıktan sonra NoMovesLeft
+            if (AreAllPlayersAttached())
+            {
+                Debug.Log("[RECONNECT] Moves kalmadı ve tüm player'lar bağlı → NoMovesLeft()");
+                gameManager.NoMovesLeft();
+            }
+            else
+            {
+                Debug.Log("[RECONNECT] Moves kalmadı ama bazı player'lar detached, bekleniyor...");
+            }
+        }
     }
 
     // -------------------------------------------------------
@@ -464,8 +501,20 @@ public class PlayerMovement : MonoBehaviour
             Destroy(fx, 0.3f);
         }
 
+        // Collect handling: temp veya anında ekleme
         other.gameObject.SetActive(false);
-        collectedTemp.Add(other.gameObject);
+
+        if (gameManager != null && gameManager.collectImmediately)
+        {
+            // Anında ekle
+            gameManager.UpdateCollectible();
+            Destroy(other.gameObject);
+        }
+        else
+        {
+            // Temp'e ekle, line'a bağlanınca işlenecek
+            collectedTemp.Add(other.gameObject);
+        }
 
         if (col.collectibleType == Collectibles.CollectibleType.Shield)
         {

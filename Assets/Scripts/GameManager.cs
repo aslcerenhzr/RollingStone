@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -12,6 +13,8 @@ public class GameManager : MonoBehaviour
     public int health = 3;
 
     public bool diedByHealth;
+    [Header("Collectible Settings")]
+    public bool collectImmediately = false;
 
     private GameObject[] collectibles;
     private int totalCollectibles;
@@ -111,7 +114,13 @@ public class GameManager : MonoBehaviour
         if (collectedCount >= totalCollectibles)
         {
             gameOverManager.ShowWin();
-            LevelProgressManager.instance.AddCoin(totalCollectibles);
+            // Her level coin ödülü sadece 1 kere verilsin
+            string currentName = SceneManager.GetActiveScene().name;
+            string numberPart = currentName.Replace("Level", "");
+            int levelNumber;
+            int.TryParse(numberPart, out levelNumber);
+
+            LevelProgressManager.instance.AddCoinOnceForLevel(levelNumber, totalCollectibles);
         }
     }
 
